@@ -571,7 +571,7 @@ else ifeq ($(PLATFORM),$(filter $(PLATFORM),DINGOO GCW))
 else ifeq ($(PLATFORM),SKYOS)
     COMPILERFLAGS += -DUNDERSCORES
 else ifeq ($(PLATFORM),MIYOO)
-    COMPILERFLAGS += -D__MIYOO__
+    COMPILERFLAGS += -D__MIYOO__ -ffast-math
     LINKERFLAGS += -Wl,--gc-sections
 else ifeq ($(SUBPLATFORM),LINUX)
     # Locate .so files

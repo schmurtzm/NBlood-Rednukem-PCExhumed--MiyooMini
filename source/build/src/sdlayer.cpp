@@ -86,7 +86,7 @@ static int sdl_minimized;
 #endif
 
 int32_t xres=-1, yres=-1, bpp=0, fullscreen=0, bytesperline;
-double refreshfreq = 59.0;
+double refreshfreq = 60.0;
 intptr_t frameplace=0;
 int32_t lockcount=0;
 char modechange=1;
@@ -1755,7 +1755,7 @@ int32_t videoSetMode(int32_t x, int32_t y, int32_t c, int32_t fs)
         // init
         sdl_window = SDL_CreateWindow("", r_windowpositioning && windowx != -1 ? windowx : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(display),
                                       r_windowpositioning && windowy != -1 ? windowy : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(display), x, y,
-                                      SDL_WINDOW_RESIZABLE | borderless);
+                                      SDL_WINDOW_FULLSCREEN);
         if (!sdl_window)
             SDL2_VIDEO_ERR("SDL_CreateWindow");
 

@@ -75,7 +75,7 @@ static void fillData(void * userdata, Uint8 * ptr, int remaining)
 
     while (remaining > 0)
     {
-        if (MixBufferUsed == MixBufferSize)
+        if (MixBufferUsed >= MixBufferSize)
         {
             MixCallBack();
             MixBufferUsed = 0;
@@ -177,7 +177,7 @@ int SDLDrv_PCM_Init(int *mixrate, int *numchannels, void * initdata)
         return SDLErr_Error;
     }
 
-    int chunksize = 512;
+    int chunksize = 64;
 #ifdef __ANDROID__
     chunksize = droidinfo.audio_buffer_size;
 #endif
