@@ -105,6 +105,73 @@ char gamefunctions[NUMGAMEFUNCTIONS][MAXGAMEFUNCLEN] =
 
 #ifdef __SETUP__
 
+#ifdef __MIYOO__
+char keydefaults[NUMGAMEFUNCTIONS*2][MAXGAMEFUNCLEN] =
+   {
+   "Up", "Kpad8",
+   "Down", "Kpad2",
+   "Left", "Kpad4",
+   "Right", "KPad6",
+   "LAlt", "RAlt",
+   "RCtrl", "",
+   "E", "",
+   "LShift", "RShift",
+   "CapLck", "",
+   "Space", "/",
+   "LCtrl", "",
+   "PgUp", "Kpad9",
+   "PgDn", "Kpad3",
+   "Insert", "Kpad0",
+   "Delete", "Kpad.",
+   "A", "",
+   "D", "",
+   "Home", "KPad7",
+   "End", "Kpad1",
+   "1", "",
+   "2", "",
+   "3", "",
+   "4", "",
+   "5", "",
+   "6", "",
+   "7", "",
+   "8", "",
+   "9", "",
+   "0", "",
+   "Enter", "KpdEnt",
+   "[", "",
+   "]", "",
+   "H", "",
+   "J", "",
+   "N", "",
+   "M", "",
+   "BakSpc", "",
+   "T", "",
+   "Tab", "",
+   "-", "Kpad-",
+   "=", "Kpad+",
+   "KPad5", "",
+   "ScrLck", "",
+   "Y", "",
+   "F", "",
+   "K", "",
+   "", "",
+   "", "",
+   "R", "",
+   "Q", "",
+   "'", "",
+   ";", "",
+   "`", "",
+   "", "",
+   "", "",
+   "", "",
+   "", "",
+   "X", "",
+   "F6", "",
+   "F9", "",
+   "F7", "",
+   "", "",
+   };
+#else
 char keydefaults[NUMGAMEFUNCTIONS*2][MAXGAMEFUNCLEN] =
    {
    "W", "Kpad8",
@@ -170,6 +237,7 @@ char keydefaults[NUMGAMEFUNCTIONS*2][MAXGAMEFUNCLEN] =
    "F7", "",
    "", "",
    };
+#endif
 
 char oldkeydefaults[NUMGAMEFUNCTIONS*2][MAXGAMEFUNCLEN] =
    {

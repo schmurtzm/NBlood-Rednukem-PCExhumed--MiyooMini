@@ -41,7 +41,7 @@
 //////////
 // Compilation switches for optional/extended engine features
 
-#if !defined(__arm__) && !defined(GEKKO)
+#if (!defined(__arm__) || defined(__MIYOO__)) && !defined(GEKKO)
 # define HIGH_PRECISION_SPRITE
 #endif
 

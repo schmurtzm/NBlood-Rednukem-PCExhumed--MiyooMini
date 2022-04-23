@@ -2,7 +2,7 @@
  * softsurface.cpp
  *  An 8-bit rendering surface that can quickly upscale and blit 8-bit paletted buffers to an external 32-bit buffer.
  *
- * Copyright © 2018, Alex Dawson. All rights reserved.
+ * Copyright ï¿½ 2018, Alex Dawson. All rights reserved.
  */
 
 #include "softsurface.h"
@@ -147,6 +147,16 @@ vec2_t softsurface_getDestinationBufferResolution()
 template <typename UINTTYPE>
 void softsurface_blitBufferInternal(UINTTYPE* destBuffer)
 {
+#ifdef __MIYOO__
+    const uint8_t* __restrict pSrc = buffer;
+    UINTTYPE* __restrict pDst = destBuffer;
+
+    size_t length = min(bufferRes.x, destBufferRes.x) * min(bufferRes.y, destBufferRes.y);
+    for (size_t i = 0; i < length; i++)
+    {
+        pDst[i] = *((UINTTYPE*)(pPal + pSrc[length - i - 1]));
+    }
+#else
     const uint8_t* __restrict pSrc = buffer;
     UINTTYPE* __restrict pDst = destBuffer;
     const UINTTYPE* const pEnd = destBuffer+destBufferRes.x*mulscale16(yScale16, bufferRes.y);
@@ -183,6 +193,7 @@ void softsurface_blitBufferInternal(UINTTYPE* destBuffer)
             linesToCopy -= lines;
         }
     }
+#endif
 }
 
 void softsurface_blitBuffer(uint32_t* destBuffer,

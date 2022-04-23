@@ -448,7 +448,9 @@ ifeq ($(PLATFORM),WINDOWS)
     audiolib_objs += driver_directsound.cpp driver_winmm.cpp 
 endif
 ifeq ($(SUBPLATFORM),LINUX)
-    audiolib_objs += driver_alsa.cpp
+    ifneq ($(USE_ALSA),0)
+        audiolib_objs += driver_alsa.cpp
+    endif
 endif
 
 ifeq ($(RENDERTYPE),SDL)
@@ -716,7 +718,12 @@ duke3d_game_orderonlydeps :=
 duke3d_editor_orderonlydeps :=
 
 ifeq ($(SUBPLATFORM),LINUX)
-    LIBS += -lFLAC -lasound
+    ifeq ($(HAS_FLAC),1)
+        LIBS += -lFLAC
+    endif
+    ifeq ($(USE_ALSA),1)
+        LIBS += -lasound
+    endif
 endif
 
 ifeq ($(PLATFORM),BSD)
@@ -1412,8 +1419,16 @@ endif
 
 #### Targets
 
+duke3d: duke3d
+blood: blood
+sw: sw
+rr: rr
+exhumed: exhumed
+
 all: \
+    duke3d \
     blood \
+    sw \
     rr \
     exhumed \
 

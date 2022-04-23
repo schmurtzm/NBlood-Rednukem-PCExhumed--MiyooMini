@@ -273,10 +273,17 @@ void CONFIG_SetDefaults(void)
     }
     else
 # endif
+#ifdef __MIYOO__
+    {
+        gSetup.xdim = 640;
+        gSetup.ydim = 480;
+    }
+#else
     {
         gSetup.xdim = 1024;
         gSetup.ydim = 768;
     }
+#endif
 #endif
 
 #ifdef USE_OPENGL

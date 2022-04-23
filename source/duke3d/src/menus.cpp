@@ -1208,7 +1208,7 @@ static MenuEntry_t ME_SAVE_NEW = MAKE_MENUENTRY( s_NewSaveGame, &MF_Minifont, &M
 static MenuEntry_t *ME_SAVE;
 static MenuEntry_t **MEL_SAVE;
 
-#ifdef __linux__
+#if defined(__linux__) && defined(USE_ALSA)
 static int32_t alsadevice;
 static std::vector<alsa_mididevinfo_t> alsadevices;
 #endif
@@ -1259,7 +1259,7 @@ static MenuEntry_t  ME_SOUND_EXTMUSIC  = MAKE_MENUENTRY("Load OGG/FLAC music:", 
 static MenuRangeInt32_t MEO_SOUND_NUMVOICES = MAKE_MENURANGE( &soundvoices, &MF_Redfont, 16, 128, 0, 8, DisplayTypeInteger );
 static MenuEntry_t ME_SOUND_NUMVOICES = MAKE_MENUENTRY( "Voices:", &MF_Redfont, &MEF_BigOptionsRt, &MEO_SOUND_NUMVOICES, RangeInt32 );
 
-#ifdef __linux__
+#if defined(__linux__) && defined(USE_ALSA)
 static char const *MEOSN_SOUND_ALSADEVICE[MAXVALIDMODES];
 static MenuOptionSet_t MEOS_SOUND_ALSADEVICE = MAKE_MENUOPTIONSETDYN( MEOSN_SOUND_ALSADEVICE, NULL, 0, 0x0 );
 static MenuOption_t MEO_SOUND_ALSADEVICE = MAKE_MENUOPTION( &MF_Redfont, &MEOS_SOUND_ALSADEVICE, &alsadevice );
@@ -1271,7 +1271,7 @@ static char const *MEOSN_SOUND_MIDIDRIVER[] = {
 #ifdef _WIN32
     "Windows MME",
 #endif
-#ifdef __linux__
+#if defined(__linux__) && defined(USE_ALSA)
     "ALSA MIDI",
 #endif
     ".sf2 synth",
@@ -1281,7 +1281,7 @@ static int32_t MEOSV_SOUND_MIDIDRIVER[] = {
 #ifdef _WIN32
     ASS_WinMM,
 #endif
-#ifdef __linux__
+#if defined(__linux__) && defined(USE_ALSA)
     ASS_ALSA,
 #endif
     ASS_SF2,
@@ -1316,7 +1316,7 @@ static MenuEntry_t *MEL_SOUND_DEVSETUP[] = {
 #ifndef EDUKE32_RETAIL_MENU
     &ME_SOUND_NUMVOICES,
     &ME_SOUND_MIDIDRIVER,
-#ifdef __linux__
+#if defined(__linux__) && defined(USE_ALSA)
     &ME_SOUND_ALSADEVICE,
 #endif
     &ME_SOUND_OPL3AMP,
@@ -1379,7 +1379,7 @@ static MenuOption_t MEO_PLAYER_TEAM = MAKE_MENUOPTION( &MF_Bluefont, &MEOS_PLAYE
 static MenuEntry_t ME_PLAYER_TEAM = MAKE_MENUENTRY( "Team", &MF_Bluefont, &MEF_PlayerNarrow, &MEO_PLAYER_TEAM, Option );
 #ifndef EDUKE32_RETAIL_MENU
 static MenuLink_t MEO_PLAYER_MACROS = { MENU_MACROS, MA_Advance, };
-static MenuEntry_t ME_PLAYER_MACROS = MAKE_MENUENTRY( "Multiplayer macros", &MF_Bluefont, &MEF_SmallOptions, &MEO_PLAYER_MACROS, Link );
+static MenuEntry_t ME_PLAYER_MACROS = MAKE_MENUENTRY( "Multiplayer macros", &MF_Bluefont, &MEF_BigOptionsRt, &MEO_PLAYER_MACROS, Link );
 #endif
 
 static MenuEntry_t *MEL_PLAYER[] = {
@@ -2429,12 +2429,14 @@ static void Menu_Pre(MenuID_t cm)
                                            !(ud.statusbarflags & STATUSBAR_NOFULL) +
                                            !(ud.statusbarflags & STATUSBAR_NOSHRINK) * 14;
         MEO_SCREENSETUP_SCREENSIZE.max = MEO_SCREENSETUP_SCREENSIZE.steps - 1;
+#ifdef USE_OPENGL
         if (MEO_SCREENSETUP_SCREENSIZE.steps <= 2 && !(ud.statusbarflags & STATUSBAR_NONONE))
         {
             ME_SCREENSETUP_SCREENSIZE.entry = &MEO_SCREENSETUP_SCREENSIZE_TWO;
             ME_SCREENSETUP_SCREENSIZE.type = Option;
         }
         else
+#endif
         {
             ME_SCREENSETUP_SCREENSIZE.entry = &MEO_SCREENSETUP_SCREENSIZE;
             ME_SCREENSETUP_SCREENSIZE.type = RangeInt32;
@@ -2475,11 +2477,13 @@ static void Menu_Pre(MenuID_t cm)
 #endif
         }
 
+#ifdef USE_OPENGL
         MenuEntry_HideOnCondition(&ME_RENDERERSETUP_TEXQUALITY, !usehightile);
         MenuEntry_HideOnCondition(&ME_RENDERERSETUP_PRECACHE, !usehightile);
 # ifndef EDUKE32_GLES
         MenuEntry_HideOnCondition(&ME_RENDERERSETUP_TEXCACHE, !(glusetexcompr && usehightile));
 # endif
+#endif
 //# ifdef USE_GLEXT
 //        MenuEntry_HideOnCondition(&ME_RENDERERSETUP_DETAILTEX, !usehightile);
 //        MenuEntry_HideOnCondition(&ME_RENDERERSETUP_GLOWTEX, !usehightile);
@@ -2524,7 +2528,7 @@ static void Menu_Pre(MenuID_t cm)
 #ifndef EDUKE32_RETAIL_MENU
         MenuEntry_DisableOnCondition(&ME_SOUND_MIDIDRIVER, !ud.config.MusicToggle);
         MenuEntry_DisableOnCondition(&ME_SOUND_NUMVOICES, !ud.config.SoundToggle);
-#ifdef __linux__
+#if defined(__linux__) && defined(USE_ALSA)
         MenuEntry_DisableOnCondition(&ME_SOUND_ALSADEVICE, !ud.config.MusicToggle);
         MenuEntry_HideOnCondition(&ME_SOUND_ALSADEVICE, musicdevice != ASS_ALSA);
 #endif
@@ -2546,7 +2550,7 @@ static void Menu_Pre(MenuID_t cm)
                                                         extmusic == g_maybeUpgradeMusic &&
 #endif
                                                         !Bstrcmp(sf2bankfile, SF2_BankFile)
-#ifdef __linux__
+#if defined(__linux__) && defined(USE_ALSA)
                                                         && alsadevices.size() > 0
                                                         && alsadevices[alsadevice].clntid == ALSA_ClientID
                                                         && alsadevices[alsadevice].portid == ALSA_PortID
@@ -3628,7 +3632,7 @@ static void Menu_RefreshSoundProperties()
     ud.config.MixRate     = FX_MixRate;
     ud.config.MusicDevice = MIDI_GetDevice();
 
-#if !defined(EDUKE32_RETAIL_MENU) && defined (__linux__)
+#if !defined(EDUKE32_RETAIL_MENU) && defined (__linux__) && defined (USE_ALSA)
     MEOS_SOUND_ALSADEVICE.numOptions = 0;
     alsadevices = ALSADrv_MIDI_ListPorts();
     if (alsadevices.size() == 0)
@@ -3817,7 +3821,7 @@ static void Menu_EntryLinkActivate(MenuEntry_t *entry)
             MUSIC_GetSongPosition(&pos);
 
         if (ud.config.MixRate != soundrate || ud.config.NumVoices != soundvoices
-#ifdef __linux__
+#if defined(__linux__) && defined(USE_ALSA)
             || (musicdevice == ASS_ALSA && (size_t)alsadevice < alsadevices.size() &&
                 (ALSA_ClientID != alsadevices[alsadevice].clntid || ALSA_PortID != alsadevices[alsadevice].portid))
 #endif
@@ -3826,7 +3830,7 @@ static void Menu_EntryLinkActivate(MenuEntry_t *entry)
             S_MusicShutdown();
             S_SoundShutdown();
 
-#ifdef __linux__
+#if defined(__linux__) && defined(USE_ALSA)
             ALSA_ClientID = alsadevices[alsadevice].clntid;
             ALSA_PortID = alsadevices[alsadevice].portid;
 #endif
@@ -3842,7 +3846,7 @@ static void Menu_EntryLinkActivate(MenuEntry_t *entry)
         if (ud.config.MusicToggle)
         {
             int const needsReInit = (ud.config.MusicDevice != musicdevice || (musicdevice == ASS_SF2 && Bstrcmp(SF2_BankFile, sf2bankfile))
-#ifdef __linux__
+#if defined(__linux__) && defined(USE_ALSA)
                 || (musicdevice == ASS_ALSA && (size_t)alsadevice < alsadevices.size() &&
                     (ALSA_ClientID != alsadevices[alsadevice].clntid || ALSA_PortID != alsadevices[alsadevice].portid))
 #endif

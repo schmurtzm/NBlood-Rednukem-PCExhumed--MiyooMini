@@ -188,6 +188,10 @@ ifeq ($(PLATFORM),WII)
     CCFULLPATH = $(DEVKITPPC)/bin/$(CC)
 endif
 
+ifeq ($(PLATFORM),MIYOO)
+    CROSS := arm-linux-gnueabihf-
+endif
+
 CC := $(CROSS)gcc$(CROSS_SUFFIX)
 CXX := $(CROSS)g++$(CROSS_SUFFIX)
 
@@ -296,6 +300,8 @@ ifeq ($(PLATFORM),WINDOWS)
     endif
 else ifeq ($(PLATFORM),WII)
     IMPLICIT_ARCH := ppc
+else ifeq ($(PLATFORM),MIYOO)
+    IMPLICIT_ARCH := arm
 else
     ifneq ($(ARCH),)
         override ARCH := $(subst i486,i386,$(subst i586,i386,$(subst i686,i386,$(strip $(ARCH)))))
@@ -352,6 +358,7 @@ HAVE_XMP := 1
 RENDERTYPE := SDL
 SDL_TARGET := 2
 USE_PHYSFS := 0
+USE_ALSA := 1
 
 ifneq (0,$(USE_PHYSFS))
     # PhysFS requires this to be off
@@ -389,11 +396,19 @@ else ifeq ($(PLATFORM),WII)
     override HAVE_GTK2 := 0
     override HAVE_FLAC := 0
     SDL_TARGET := 1
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),DINGOO GCW QNX SUNOS SYLLABLE))
+else ifeq ($(PLATFORM),$(filter $(PLATFORM),DINGOO GCW QNX SUNOS SYLLABLE MIYOO))
     override USE_OPENGL := 0
     override NOASM := 1
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),BEOS SKYOS))
     override NOASM := 1
+endif
+
+ifeq ($(PLATFORM),MIYOO)
+    override SDL_TARGET := 1
+    override SDL_USEFOLDER := 1
+    override SDL_STATIC := 0
+    override HAVE_FLAC := 0
+    override USE_ALSA := 0
 endif
 
 ifneq (i386,$(strip $(IMPLICIT_ARCH)))
@@ -555,6 +570,9 @@ else ifeq ($(PLATFORM),$(filter $(PLATFORM),DINGOO GCW))
     COMPILERFLAGS += -D__OPENDINGUX__
 else ifeq ($(PLATFORM),SKYOS)
     COMPILERFLAGS += -DUNDERSCORES
+else ifeq ($(PLATFORM),MIYOO)
+    COMPILERFLAGS += -D__MIYOO__
+    LINKERFLAGS += -Wl,--gc-sections
 else ifeq ($(SUBPLATFORM),LINUX)
     # Locate .so files
     LINKERFLAGS += -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin
@@ -574,8 +592,8 @@ ifndef OPTOPT
         else
             ifeq ($(PLATFORM),DARWIN)
                 OPTOPT := -march=core2 -mmmx -msse -msse2 -msse3 -mssse3
-            else
-                OPTOPT := -march=nocona
+            else 
+                OPTOPT := -march=nocona 
             endif
         endif
     endif
@@ -601,6 +619,9 @@ ifndef OPTOPT
     endif
     ifeq ($(PLATFORM),WII)
         OPTOPT := -mtune=750
+    endif
+    ifeq ($(PLATFORM),MIYOO)
+        OPTOPT := -march=armv7ve+simd -marm -mtune=cortex-a7
     endif
 endif
 
@@ -890,6 +911,9 @@ endif
 ifneq (0,$(HAVE_XMP))
     COMPILERFLAGS += -DHAVE_XMP
 endif
+ifneq (0,$(USE_ALSA))
+    COMPILERFLAGS += -DUSE_ALSA
+endif
 
 ifeq ($(RENDERTYPE),SDL)
     ifeq ($(SDL_TARGET),2)
@@ -947,7 +971,10 @@ ifeq ($(RENDERTYPE),SDL)
             ifeq ($(SDL_TARGET),1)
                 COMPILERFLAGS += -D_GNU_SOURCE=1
             endif
-            COMPILERFLAGS += -D_REENTRANT -DSDL_USEFOLDER
+            COMPILERFLAGS += -D_REENTRANT
+            ifneq ($(PLATFORM),MIYOO)
+                COMPILERFLAGS += -DSDL_USEFOLDER
+            endif
             LIBS += -l$(SDLNAME)
         endif
     endif

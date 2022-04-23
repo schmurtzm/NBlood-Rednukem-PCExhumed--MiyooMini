@@ -377,10 +377,17 @@ void CONFIG_SetDefaults(void)
     }
     else
 #endif
+#ifdef __MIYOO__
+    {
+        ud_setup.ScreenWidth = 640;
+        ud_setup.ScreenHeight = 480;
+    }
+#else
     {
         ud_setup.ScreenWidth = 1024;
         ud_setup.ScreenHeight = 768;
     }
+#endif
 
     ud_setup.ScreenBPP = 32;
     FXToggle = 1;

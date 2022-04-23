@@ -211,10 +211,17 @@ void CONFIG_SetDefaults(void)
     }
     else
 # endif
+#ifdef __MIYOO__
+    {
+        ud.setup.xdim = 640;
+        ud.setup.ydim = 480;
+    }
+#else
     {
         ud.setup.xdim = 1024;
         ud.setup.ydim = 768;
     }
+#endif
 #endif
 
 #ifdef USE_OPENGL

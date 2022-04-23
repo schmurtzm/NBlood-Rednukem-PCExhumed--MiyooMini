@@ -240,7 +240,7 @@ static bool os_random_buf(void* buf, size_t buf_len) {
     ssize_t ret = syscall(SYS_getrandom, buf, buf_len, GRND_NONBLOCK);
     if (ret >= 0) return (buf_len == (size_t)ret);
     if (ret != ENOSYS) return false;
-    mi_atomic_store_release(&no_getrandom, 1UL); // don't call again, and fall back to /dev/urandom
+    mi_atomic_store_release(&no_getrandom, 1U); // don't call again, and fall back to /dev/urandom
   }
 #endif
   int flags = O_RDONLY;
