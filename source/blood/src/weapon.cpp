@@ -1049,6 +1049,7 @@ void ThrowCan(int, PLAYER *pPlayer)
     if (pSprite)
     {
         sfxPlay3DSound(pSprite, 441, 0, 0);
+        pSprite->shade = -128;
         evPost(pSprite->index, 3, pPlayer->fuseTime, kCmdOn);
         int nXSprite = pSprite->extra;
         XSPRITE *pXSprite = &xsprite[nXSprite];
@@ -1577,7 +1578,7 @@ void FireTesla(int nTrigger, PLAYER *pPlayer)
             }
         }
         playerFireMissile(pPlayer, pMissile->at0, pPlayer->aim.dx, pPlayer->aim.dy, pPlayer->aim.dz, pMissile->at4);
-        UseAmmo(pPlayer, 7, pMissile->at8);
+        UseAmmo(pPlayer, pPlayer->weaponAmmo, pMissile->at8);
         sfxPlay3DSound(pSprite, pMissile->atc, 1, 0);
         pPlayer->visibility = pMissile->at10;
         pPlayer->flashEffect = pMissile->at14;
@@ -1678,7 +1679,6 @@ void AltFireLifeLeech(int nTrigger, PLAYER *pPlayer)
         pXSprite->Push = 1;
         pXSprite->Proximity = 1;
         pXSprite->DudeLockout = 1;
-        pXSprite->data4 = ClipHigh(pPlayer->ammoCount[4], 12);
         pXSprite->stateTimer = 1;
         evPost(pMissile->index, 3, 120, kCallbackLeechStateTimer);
         if (gGameOptions.nGameType <= 1)
@@ -1806,7 +1806,7 @@ char WeaponFindLoaded(PLAYER *pPlayer, int *a2)
             }
         }
     }
-    else if (a2)
+    if (a2)
         *a2 = v14;
     return weapon;
 }
@@ -1899,7 +1899,7 @@ char processProxy(PLAYER *pPlayer)
             pPlayer->weaponState = 8;
             StartQAV(pPlayer, 29, nClientThrowProx, 0);
         }
-        break;
+        return 1;
     }
     return 0;
 }
@@ -1915,7 +1915,7 @@ char processRemote(PLAYER *pPlayer)
             pPlayer->weaponState = 11;
             StartQAV(pPlayer, 39, nClientThrowRemote, 0);
         }
-        break;
+        return 1;
     }
     return 0;
 }
