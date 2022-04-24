@@ -45,6 +45,40 @@ static struct
     const char *key;
     kb_scancode sc;
 } CONSTEXPR sctokeylut[] = {
+#ifdef __MIYOO__
+    { "Menu",   0x01 }, // Escape
+    { "Up",     0xc8 }, // Up
+    { "Down",   0xd0 }, // Down
+    { "Left",   0xcb }, // Left
+    { "Right",  0xcd }, // Right
+    { "L1",     0x12 }, // E
+    { "L2",     0x0f }, // Tab
+    { "R1",     0x14 }, // T
+    { "R2",     0x0e }, // BakSpc
+    { "A",      0x39 }, // Space
+    { "B",      0x1d }, // LCtrl
+    { "X",      0x2a }, // LShift
+    { "Y",      0x38 }, // LAlt
+    { "Select", 0x9d }, // RCtrl
+    { "Start",  0x1c }, // Enter/Return
+
+    // Menu Chorded Keys
+    { "Mn + Up",        0x09 }, // 8
+    { "Mn + Down",      0x03 }, // 2
+    { "Mn + Left",      0x05 }, // 4
+    { "Mn + Right",     0x07 }, // 6
+    { "Mn + L1",        0xc9 }, // PgUp
+    { "Mn + L2",        0xc7 }, // Home
+    { "Mn + R1",        0xd1 }, // PgDn
+    { "Mn + R2",        0xcf }, // End
+    { "Mn + A",         0x17 }, // I
+    { "Mn + B",         0x25 }, // K
+    { "Mn + X",         0x16 }, // U
+    { "Mn + Y",         0x24 }, // J
+    { "Mn + Select",    0x36 }, // RShift
+    { "Mn + Start",     0x9c }, // KpdEnt
+
+#else
     { "Escape", 0x1 },     { "1", 0x2 },       { "2", 0x3 },       { "3", 0x4 },      { "4", 0x5 },       { "5", 0x6 },       { "6", 0x7 },
     { "7", 0x8 },          { "8", 0x9 },       { "9", 0xa },       { "0", 0xb },      { "-", 0xc },       { "=", 0xd },       { "BakSpc", 0xe },
     { "Tab", 0xf },        { "Q", 0x10 },      { "W", 0x11 },      { "E", 0x12 },     { "R", 0x13 },      { "T", 0x14 },      { "Y", 0x15 },
@@ -60,7 +94,69 @@ static struct
     { "F11", 0x57 },       { "F12", 0x58 },    { "KpdEnt", 0x9c }, { "RCtrl", 0x9d }, { "Kpad/", 0xb5 },  { "RAlt", 0xb8 },   { "PrtScn", 0xb7 },
     { "Pause", 0xc5 },     { "Home", 0xc7 },   { "Up", 0xc8 },     { "PgUp", 0xc9 },  { "Left", 0xcb },   { "Right", 0xcd },  { "End", 0xcf },
     { "Down", 0xd0 },      { "PgDn", 0xd1 },   { "Insert", 0xd2 }, { "Delete", 0xd3 },
+#endif
 };
+
+#ifdef __MIYOO__
+static kb_scancode miyoo_key_to_chorded(kb_scancode key)
+{
+    switch(key)
+    {
+        case 0xc8: return 0x09;
+        case 0xd0: return 0x03;
+        case 0xcb: return 0x05;
+        case 0xcd: return 0x07;
+        case 0x12: return 0xc9;
+        case 0x0f: return 0xc7;
+        case 0x14: return 0xd1;
+        case 0x0e: return 0xcf;
+        case 0x39: return 0x17;
+        case 0x1d: return 0x25;
+        case 0x2a: return 0x16;
+        case 0x38: return 0x24;
+        case 0x9d: return 0x36;
+        case 0x1c: return 0x9c;
+        default: return key;
+    }
+}
+
+static const char* miyoo_get_key_name(kb_scancode key)
+{
+    switch(key)
+    {
+        case 0x01: return "Menu";
+        case 0xc8: return "Up";
+        case 0xd0: return "Down";
+        case 0xcb: return "Left";
+        case 0xcd: return "Right";
+        case 0x12: return "L1";
+        case 0x0f: return "L2";
+        case 0x14: return "R1";
+        case 0x0e: return "R2";
+        case 0x39: return "A";
+        case 0x1d: return "B";
+        case 0x2a: return "X";
+        case 0x38: return "Y";
+        case 0x9d: return "Select";
+        case 0x1c: return "Start";
+        case 0x09: return "Mn + Up";
+        case 0x03: return "Mn + Down";
+        case 0x05: return "Mn + Left";
+        case 0x07: return "Mn + Right";
+        case 0xc9: return "Mn + L1";
+        case 0xc7: return "Mn + L2";
+        case 0xd1: return "Mn + R1";
+        case 0xcf: return "Mn + R2";
+        case 0x17: return "Mn + A";
+        case 0x25: return "Mn + B";
+        case 0x16: return "Mn + X";
+        case 0x24: return "Mn + Y";
+        case 0x36: return "Mn + Select";
+        case 0x9c: return "Mn + Start";
+        default: return "[UNKNOWN]";
+    }
+}
+#endif
 
 #define MAXKEYBOARDSCAN  256
 

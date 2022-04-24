@@ -14,6 +14,7 @@
 #include "renderlayer.h"
 #include "sdl_inc.h"
 #include "softsurface.h"
+#include "keyboard.h"
 
 #ifdef USE_OPENGL
 # include "glad/glad.h"
@@ -1074,7 +1075,11 @@ int32_t initinput(void(*hotplugCallback)(void) /*= nullptr*/)
         if (!keytranslation[i])
             continue;
 
+#ifdef __MIYOO__
+        Bstrncpyz(g_keyNameTable[keytranslation[i]], miyoo_get_key_name(keytranslation[i]), sizeof(g_keyNameTable[0]));
+#else
         Bstrncpyz(g_keyNameTable[keytranslation[i]], SDL_GetKeyName(SDL_SCANCODE_TO_KEYCODE(i)), sizeof(g_keyNameTable[0]));
+#endif
     }
 
 #if SDL_MAJOR_VERSION >= 2
