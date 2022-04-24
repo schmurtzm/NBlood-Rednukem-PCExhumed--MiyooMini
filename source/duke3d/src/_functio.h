@@ -276,6 +276,74 @@ int32_t keybind_order_custom[NUMGAMEFUNCTIONS] = {-1};
 
 #ifdef __SETUP__
 
+#ifdef __MIYOO__
+const char keydefaults[NUMGAMEFUNCTIONS*2][MAXGAMEFUNCLEN] =
+   {
+   /* Move_Forward         */ "Up", "",
+   /* Move_Backward        */ "Down", "",
+   /* Turn_Left            */ "Left", "",
+   /* Turn_Right           */ "Right", "",
+   /* Strafe               */ "B", "",
+   /* Fire                 */ "A", "", 
+   /* Open                 */ "B", "",
+   /* Run                  */ "Y", "",
+   /* Alt_Fire             */ "R2", "",
+   /* Jump                 */ "X", "",
+   /* Crouch               */ "L1", "",
+   /* Look_Up              */ "", "",
+   /* Look_Down            */ "", "",
+   /* Look_Left            */ "", "",
+   /* Look_Right           */ "", "",
+   /* Strafe_Left          */ "", "",
+   /* Strafe_Right         */ "", "",
+   /* Aim_Up               */ "Mn + X", "",
+   /* Aim_Down             */ "Mn + B", "",
+   /* Weapon_1             */ "", "",
+   /* Weapon_2             */ "", "",
+   /* Weapon_3             */ "", "",
+   /* Weapon_4             */ "", "",
+   /* Weapon_5             */ "", "",
+   /* Weapon_6             */ "", "",
+   /* Weapon_7             */ "", "",
+   /* Weapon_8             */ "", "",
+   /* Weapon_9             */ "", "",
+   /* Weapon_10            */ "", "",
+   /* Inventory            */ "Mn + A", "",
+   /* Inventory_Left       */ "Mn + Up", "",
+   /* Inventory_Right      */ "Mn + Down", "",
+   /* Holo_Duke            */ "", "",
+   /* Jetpack              */ "", "",
+   /* NightVision          */ "", "",
+   /* MedKit               */ "", "",
+   /* TurnAround           */ "", "",
+   /* SendMessage          */ "", "",
+   /* Map                  */ "Select", "",
+   /* Shrink_Screen        */ "", "",
+   /* Enlarge_Screen       */ "", "",
+   /* Center_View          */ "Mn + Y", "",
+   /* Holster_Weapon       */ "", "",
+   /* Show_Opponents_Weapon*/ "", "",
+   /* Map_Follow_Mode      */ "", "",
+   /* See_Coop_View        */ "", "",
+   /* Mouse_Aiming         */ "", "",
+   /* Toggle_Crosshair     */ "", "",
+   /* Steroids             */ "", "",
+   /* Quick_Kick           */ "R1", "",
+   /* Next_Weapon          */ "", "",
+   /* Previous_Weapon      */ "", "",
+   /* Show_Console         */ "", "",
+   /* Show_Scoreboard      */ "", "",
+   /* Dpad_Select          */ "", "",
+   /* Dpad_Aiming          */ "", "",
+   /* AutoRun              */ "", "",
+   /* Last_Weapon          */ "", "",
+   /* Quick_Save           */ "Mn + R1", "",
+   /* Quick_Load           */ "Mn + L1", "",
+   /* Alt_Weapon           */ "", "",
+   /* Third_Person_View    */ "", "",
+   /* Toggle_Crouch        */ "", "",
+   };
+#else
 const char keydefaults[NUMGAMEFUNCTIONS*2][MAXGAMEFUNCLEN] =
    {
    "W", "Kpad8",
@@ -342,6 +410,7 @@ const char keydefaults[NUMGAMEFUNCTIONS*2][MAXGAMEFUNCLEN] =
    "F7", "",
    "C", "",
    };
+#endif
 
 const char oldkeydefaults[NUMGAMEFUNCTIONS*2][MAXGAMEFUNCLEN] =
    {
