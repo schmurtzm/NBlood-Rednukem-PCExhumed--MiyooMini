@@ -63,20 +63,20 @@ static struct
     { "Start",  0x1c }, // Enter/Return
 
     // Menu Chorded Keys
-    { "Mn + Up",        0x09 }, // 8
-    { "Mn + Down",      0x03 }, // 2
-    { "Mn + Left",      0x05 }, // 4
-    { "Mn + Right",     0x07 }, // 6
-    { "Mn + L1",        0xc9 }, // PgUp
-    { "Mn + L2",        0xc7 }, // Home
-    { "Mn + R1",        0xd1 }, // PgDn
-    { "Mn + R2",        0xcf }, // End
-    { "Mn + A",         0x17 }, // I
-    { "Mn + B",         0x25 }, // K
-    { "Mn + X",         0x16 }, // U
-    { "Mn + Y",         0x24 }, // J
-    { "Mn + Select",    0x36 }, // RShift
-    { "Mn + Start",     0x9c }, // KpdEnt
+    { "Fn_Up",        0x09 }, // 8
+    { "Fn_Down",      0x03 }, // 2
+    { "Fn_Left",      0x05 }, // 4
+    { "Fn_Right",     0x07 }, // 6
+    { "Fn_L1",        0xc9 }, // PgUp
+    { "Fn_L2",        0xc7 }, // Home
+    { "Fn_R1",        0xd1 }, // PgDn
+    { "Fn_R2",        0xcf }, // End
+    { "Fn_A",         0x17 }, // I
+    { "Fn_B",         0x25 }, // K
+    { "Fn_X",         0x16 }, // U
+    { "Fn_Y",         0x24 }, // J
+    { "Fn_Select",    0x36 }, // RShift
+    { "Fn_Start",     0x9c }, // KpdEnt
 
 #else
     { "Escape", 0x1 },     { "1", 0x2 },       { "2", 0x3 },       { "3", 0x4 },      { "4", 0x5 },       { "5", 0x6 },       { "6", 0x7 },
@@ -185,20 +185,20 @@ static inline const char* miyoo_get_key_name(kb_scancode key)
         case 0x38: return "Y";
         case 0x9d: return "Select";
         case 0x1c: return "Start";
-        case 0x09: return "Mn + Up";
-        case 0x03: return "Mn + Down";
-        case 0x05: return "Mn + Left";
-        case 0x07: return "Mn + Right";
-        case 0xc9: return "Mn + L1";
-        case 0xc7: return "Mn + L2";
-        case 0xd1: return "Mn + R1";
-        case 0xcf: return "Mn + R2";
-        case 0x17: return "Mn + A";
-        case 0x25: return "Mn + B";
-        case 0x16: return "Mn + X";
-        case 0x24: return "Mn + Y";
-        case 0x36: return "Mn + Select";
-        case 0x9c: return "Mn + Start";
+        case 0x09: return "Fn + Up";
+        case 0x03: return "Fn + Down";
+        case 0x05: return "Fn + Left";
+        case 0x07: return "Fn + Right";
+        case 0xc9: return "Fn + L1";
+        case 0xc7: return "Fn + L2";
+        case 0xd1: return "Fn + R1";
+        case 0xcf: return "Fn + R2";
+        case 0x17: return "Fn + A";
+        case 0x25: return "Fn + B";
+        case 0x16: return "Fn + X";
+        case 0x24: return "Fn + Y";
+        case 0x36: return "Fn + Select";
+        case 0x9c: return "Fn + Start";
         default: return "[UNKNOWN]";
     }
 }
