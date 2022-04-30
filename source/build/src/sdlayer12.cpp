@@ -421,6 +421,14 @@ int32_t handleevents_pollsdl(void)
             case SDL_KEYDOWN:
             case SDL_KEYUP:
                 code = keytranslation[ev.key.keysym.sym];
+
+#ifdef __MIYOO__
+                if (code != 0x9d && KB_KeyDown[0x9d])
+                {
+                    code = miyoo_key_to_chorded(code);
+                }
+#endif
+
 #ifdef KEY_PRINT_DEBUG
                 printf("keytranslation[%d] = %s (%d)  %s\n", ev.key.keysym.sym, g_keyNameTable[code], code,
                        ev.key.type == SDL_KEYDOWN ? "DOWN" : "UP");

@@ -98,7 +98,7 @@ static struct
 };
 
 #ifdef __MIYOO__
-static kb_scancode miyoo_key_to_chorded(kb_scancode key)
+static inline kb_scancode miyoo_key_to_chorded(kb_scancode key)
 {
     switch(key)
     {
@@ -114,13 +114,59 @@ static kb_scancode miyoo_key_to_chorded(kb_scancode key)
         case 0x1d: return 0x25;
         case 0x2a: return 0x16;
         case 0x38: return 0x24;
-        case 0x9d: return 0x36;
+        case 0x9d: return key; //HACK: Should be `return 0x36;`, but since it's the function key, can cause problems
         case 0x1c: return 0x9c;
         default: return key;
     }
 }
 
-static const char* miyoo_get_key_name(kb_scancode key)
+static inline kb_scancode miyoo_get_unchorded_key(kb_scancode key)
+{
+    switch(key)
+    {
+        case 0x09: return 0xc8;
+        case 0x03: return 0xd0;
+        case 0x05: return 0xcb;
+        case 0x07: return 0xcd;
+        case 0xc9: return 0x12;
+        case 0xc7: return 0x0f;
+        case 0xd1: return 0x14;
+        case 0xcf: return 0x0e;
+        case 0x17: return 0x39;
+        case 0x25: return 0x1d;
+        case 0x16: return 0x2a;
+        case 0x24: return 0x38;
+        case 0x36: return 0x9d;
+        case 0x9c: return 0x1c;
+        default: return key;
+    }
+}
+
+static inline int8_t miyoo_is_chorded_key(kb_scancode key)
+{
+    switch (key)
+    {
+        case 0x09:
+        case 0x03:
+        case 0x05:
+        case 0x07:
+        case 0xc9:
+        case 0xc7:
+        case 0xd1:
+        case 0xcf:
+        case 0x17:
+        case 0x25:
+        case 0x16:
+        case 0x24:
+        case 0x36:
+        case 0x9c:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
+static inline const char* miyoo_get_key_name(kb_scancode key)
 {
     switch(key)
     {
@@ -173,10 +219,29 @@ extern kb_scancode KB_LastScan;
         KB_SetLastScanCode(sc_None); \
     }
 #define KB_KeyPressed(scan) (keystatus[(scan)] != 0)
+
+#ifdef __MIYOO__
+#define KB_ClearKeyDown(scan)      \
+    {                              \
+        if (miyoo_is_chorded_key(scan)) \
+        {                               \
+            keystatus[0x9d] = FALSE;    \
+            keystatus[(scan)] = FALSE;  \
+            keystatus[miyoo_get_unchorded_key(scan)] = FALSE; \
+        }                               \
+        else \
+        { \
+            keystatus[(scan)] = FALSE; \
+            keystatus[miyoo_key_to_chorded(scan)] = FALSE; \
+        } \
+    }
+#else
 #define KB_ClearKeyDown(scan)      \
     {                              \
         keystatus[(scan)] = FALSE; \
     }
+#endif
+
 #define KB_UnBoundKeyPressed(scan) (keystatus[(scan)] != 0 && !CONTROL_KeyBinds[scan].cmdstr)
 #define KB_GetCh keyGetChar
 #define KB_KeyWaiting keyBufferWaiting
@@ -192,7 +257,18 @@ static inline void KB_ClearKeysDown(void)
 static inline void KB_KeyEvent(int32_t scancode, int32_t keypressed)
 {
     if (keypressed)
+    {
+#ifdef __MIYOO__
+        // Check if function button is pressed, and if so change it to the modified scancode
+        // TODO: The function button is forced to Select at the moment, should be modifiable
+        if (keystatus[0x9d])
+        {
+            KB_LastScan = miyoo_key_to_chorded(scancode);
+        }
+#else
         KB_LastScan = scancode;
+#endif
+    }
 }
 
 static inline void KB_Startup(void) { keySetCallback(KB_KeyEvent); }
