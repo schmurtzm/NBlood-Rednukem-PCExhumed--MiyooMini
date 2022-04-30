@@ -3920,7 +3920,7 @@ static void Menu_PreInput(MenuEntry_t *entry)
     {
 
     case MENU_KEYBOARDKEYS:
-        if (KB_KeyPressed(sc_Delete))
+        if (KB_KeyPressed(sc_Delete) || KB_KeyPressed(sc_BackSpace))
         {
             auto *column = (MenuCustom2Col_t*)entry->entry;
             char key[2];
@@ -3930,21 +3930,24 @@ static void Menu_PreInput(MenuEntry_t *entry)
             CONFIG_MapKey(M_KEYBOARDKEYS.currentEntry, ud.config.KeyboardKeys[M_KEYBOARDKEYS.currentEntry][0], key[0], ud.config.KeyboardKeys[M_KEYBOARDKEYS.currentEntry][1], key[1]);
             S_PlaySound(RR ? 335 : KICK_HIT);
             KB_ClearKeyDown(sc_Delete);
+            KB_ClearKeyDown(sc_BackSpace);
         }
         break;
 
     case MENU_LOAD:
-        if (KB_KeyPressed(sc_Delete))
+        if (KB_KeyPressed(sc_Delete) || KB_KeyPressed(sc_BackSpace))
         {
             KB_ClearKeyDown(sc_Delete);
+            KB_ClearKeyDown(sc_BackSpace);
             if (M_LOAD.currentEntry < g_nummenusaves)
                 Menu_Change(MENU_LOADDELVERIFY);
         }
         break;
     case MENU_SAVE:
-        if (KB_KeyPressed(sc_Delete))
+        if (KB_KeyPressed(sc_Delete) || KB_KeyPressed(sc_BackSpace))
         {
             KB_ClearKeyDown(sc_Delete);
+            KB_ClearKeyDown(sc_BackSpace);
             if (0 < M_SAVE.currentEntry && M_SAVE.currentEntry <= (int32_t)g_nummenusaves)
                 Menu_Change(MENU_SAVEDELVERIFY);
         }

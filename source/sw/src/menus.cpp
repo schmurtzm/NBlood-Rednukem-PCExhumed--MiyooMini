@@ -841,9 +841,10 @@ SWBOOL MNU_KeySetupCustom(UserCall call, MenuItem *item)
             CONTROL_ClearUserInput(&inpt);
             return TRUE;
         }
-        else if (KB_KeyPressed(sc_Delete))
+        else if (KB_KeyPressed(sc_Delete) || KB_KeyPressed(sc_BackSpace))
         {
             KB_ClearKeyDown(sc_Delete);
+            KB_ClearKeyDown(sc_BackSpace);
             if (currentkey != gamefunc_Show_Console)
             {
                 KeyboardKeys[currentkey][currentcol] = 0xff;
