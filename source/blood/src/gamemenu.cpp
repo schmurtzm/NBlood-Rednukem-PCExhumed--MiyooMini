@@ -1153,8 +1153,8 @@ void CGameMenuItemKeyList::Draw(void)
         char key1, key2;
         key1 = KeyboardKeys[k][0];
         key2 = KeyboardKeys[k][1];
-        const char *sKey1 = key1 == sc_Tilde ? "Tilde" : KB_ScanCodeToString(key1);
-        const char *sKey2 = key2 == sc_Tilde ? "Tilde" : KB_ScanCodeToString(key2);
+        const char *sKey1 = g_keyNameTable[key1];
+        const char *sKey2 = g_keyNameTable[key2];
         sprintf(buffer, "%s", CONFIG_FunctionNumToName(k));
         for (int j = 0; j < 40; j++)
         {
