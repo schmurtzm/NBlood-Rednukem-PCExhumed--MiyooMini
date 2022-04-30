@@ -131,6 +131,8 @@ void ctrlInit(void)
     CONTROL_DefineFlag(gamefunc_MedKit, false);
     CONTROL_DefineFlag(gamefunc_ProximityBombs, false);
     CONTROL_DefineFlag(gamefunc_RemoteBombs, false);
+    CONTROL_DefineFlag(gamefunc_Quick_Save, false);
+    CONTROL_DefineFlag(gamefunc_Quick_Load, false);
 }
 
 void ctrlTerm(void)
@@ -166,6 +168,20 @@ void ctrlGetInput(void)
     auto scaleAdjustmentToInterval = [=](double x) { return x * kTicsPerSec / (1000.0 / elapsedInputTicks); };
 
     CONTROL_ProcessBinds();
+
+    if (gGameOptions.nGameType == 0)
+    {
+        if (BUTTON(gamefunc_Quick_Save))
+        {
+            CONTROL_ClearButton(gamefunc_Quick_Save);
+            gDoQuickSave = 1;
+        }
+        if (BUTTON(gamefunc_Quick_Load))
+        {
+            CONTROL_ClearButton(gamefunc_Quick_Load);
+            gDoQuickSave = 2;
+        }
+    }
 
     if (gMouseAiming)
         gMouseAim = 0;

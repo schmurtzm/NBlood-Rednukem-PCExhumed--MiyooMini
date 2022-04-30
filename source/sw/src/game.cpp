@@ -4528,9 +4528,11 @@ FunctionKeys(PLAYERp pp)
         }
 
         // F6 quick save
-        if (KEY_PRESSED(KEYSC_F6))
+        if (KEY_PRESSED(KEYSC_F6) || BUTTON(gamefunc_Quick_Save))
         {
             KEY_PRESSED(KEYSC_F6) = 0;
+            CONTROL_ClearButton(gamefunc_Quick_Save);
+
             if (!TEST(pp->Flags, PF_DEAD))
             {
                 KEY_PRESSED(KEYSC_ESC) = 1;
@@ -4550,9 +4552,10 @@ FunctionKeys(PLAYERp pp)
         }
 
         // F9 quick load
-        if (KEY_PRESSED(KEYSC_F9))
+        if (KEY_PRESSED(KEYSC_F9) || BUTTON(gamefunc_Quick_Load))
         {
             KEY_PRESSED(KEYSC_F9) = 0;
+            CONTROL_ClearButton(gamefunc_Quick_Load);
 
             if (!TEST(pp->Flags, PF_DEAD))
             {

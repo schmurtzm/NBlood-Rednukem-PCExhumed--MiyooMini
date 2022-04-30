@@ -94,6 +94,8 @@ char gamefunctions[NUMGAMEFUNCTIONS][MAXGAMEFUNCLEN] =
    "ProximityBombs",
    "RemoteBombs",
    "Show_Console",
+   "Quick_Save",
+   "Quick_Load",
    };
 
 #ifdef __SETUP__
