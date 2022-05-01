@@ -1419,12 +1419,6 @@ endif
 
 #### Targets
 
-duke3d: duke3d
-blood: blood
-sw: sw
-rr: rr
-exhumed: exhumed
-
 all: \
     duke3d \
     blood \
