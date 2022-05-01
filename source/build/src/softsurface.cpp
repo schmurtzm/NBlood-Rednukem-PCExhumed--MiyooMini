@@ -154,7 +154,7 @@ void softsurface_blitBufferInternal(UINTTYPE* destBuffer)
     size_t length = min(bufferRes.x, destBufferRes.x) * min(bufferRes.y, destBufferRes.y);
     for (size_t i = 0; i < length; i++)
     {
-        pDst[i] = *((UINTTYPE*)(pPal + pSrc[length - i - 1]));
+        pDst[i] = *((UINTTYPE*)(pPal + pSrc[i]));
     }
 #else
     const uint8_t* __restrict pSrc = buffer;
