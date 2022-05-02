@@ -264,10 +264,13 @@ static inline void KB_KeyEvent(int32_t scancode, int32_t keypressed)
         if (keystatus[0x9d])
         {
             KB_LastScan = miyoo_key_to_chorded(scancode);
+            
         }
-#else
-        KB_LastScan = scancode;
+        else
 #endif
+        {
+            KB_LastScan = scancode;
+        }
     }
 }
 
