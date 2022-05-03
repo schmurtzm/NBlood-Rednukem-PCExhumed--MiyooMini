@@ -388,6 +388,7 @@ void CONFIG_SetDefaults(void)
 
     // JBF 20031211
 
+/*
     if (RR)
     {
         Bstrcpy((char*)keydefaults[gamefunc_Holo_Duke<<1], "B");
@@ -405,6 +406,7 @@ void CONFIG_SetDefaults(void)
         Bstrcpy((char*)oldkeydefaults[gamefunc_Show_Opponents_Weapon<<1], "E");
         Bstrcpy((char*)oldkeydefaults[gamefunc_Show_Console<<1], "V");
     }
+*/
 
     CONFIG_SetDefaultKeys(keydefaults);
 
