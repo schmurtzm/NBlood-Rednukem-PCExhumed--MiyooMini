@@ -94,6 +94,65 @@ const char *gamefunctions[] =
 
 #define NUMKEYENTRIES 50
 
+#ifdef __MIYOO__
+static const char *keydefaults[] =
+{
+   "Move_Forward",          "Up", "",
+   "Move_Backward",         "Down", "",
+   "Turn_Left",             "Left", "",
+   "Turn_Right",            "Right", "",
+   "Strafe",                "B", "",
+   "Fire",                  "A", "",
+   "Open",                  "B", "",
+   "Run",                   "Y", "",
+   "AutoRun",               "", "",
+   "Jump",                  "X", "",
+   "Crouch",                "L2", "",
+   "Look_Up",               "", "",
+   "Look_Down",             "", "",
+   "Strafe_Left",           "L1", "",
+   "Strafe_Right",          "R1", "",
+   "Aim_Up",                "Fn_X", "",
+   "Aim_Down",              "Fn_B", "",
+   "Weapon_1",              "", "",
+   "Weapon_2",              "", "",
+   "Weapon_3",              "", "",
+   "Weapon_4",              "", "",
+   "Weapon_5",              "", "",
+   "Weapon_6",              "", "",
+   "Weapon_7",              "", "",
+   "Weapon_8",              "", "",
+   "Weapon_9",              "", "",
+   "Weapon_10",             "", "",
+   "Inventory",             "Fn_A", "",
+   "Inventory_Left",        "Fn_Down", "",
+   "Inventory_Right",       "Fn_Up", "",
+   "Med_Kit",               "", "",
+   "Smoke_Bomb",            "", "",
+   "Night_Vision",          "", "",
+   "Gas_Bomb",              "", "",
+   "Flash_Bomb",            "", "",
+   "Caltrops",              "", "",
+   "TurnAround",            "", "",
+   "SendMessage",           "", "",
+   "Map",                   "Fn_L2", "",
+   "Shrink_Screen",         "", "",
+   "Enlarge_Screen",        "", "",
+   "Center_View",           "Fn_Y", "",
+   "Holster_Weapon",        "", "",
+   "Map_Follow_Mode",       "", "",
+   "See_Co_Op_View",        "", "",
+   "Mouse_Aiming",          "", "",
+   "Toggle_Crosshair",      "", "",
+   "Next_Weapon",           "Fn_Right", "",
+   "Previous_Weapon",       "Fn_Left", "",
+   "Show_Menu",             "", "",
+   "Show_Console",          "", "",
+   "Alt_Weapon_Mode",       "R2", "",
+   "Quick_Save",            "Fn_R1", "",
+   "Quick_Load",            "Fn_R2", "",
+};
+#else
 static const char *keydefaults[] =
 {
     "Move_Forward", "Up", "Kpad8",
@@ -150,6 +209,7 @@ static const char *keydefaults[] =
     "Quick_Save", "", "",
     "Quick_Load", "", "",
 };
+#endif
 
 static const char *keydefaults_modern[] =
 {

@@ -100,6 +100,68 @@ char gamefunctions[NUMGAMEFUNCTIONS][MAXGAMEFUNCLEN] =
 
 #ifdef __SETUP__
 
+#ifdef __MIYOO__
+const char keydefaults[NUMGAMEFUNCTIONS*2][MAXGAMEFUNCLEN] =
+   {
+   /* Move_Forward         */ "Up", "",
+   /* Move_Backward        */ "Down", "",
+   /* Turn_Left            */ "Left", "",
+   /* Turn_Right           */ "Right", "",
+   /* Turn_Around          */ "", "",
+   /* Strafe               */ "B", "",
+   /* Strafe_Left          */ "L1", "",
+   /* Strafe_Right         */ "R1", "",
+   /* Jump                 */ "X", "",
+   /* Crouch               */ "L2", "",
+   /* Run                  */ "Y", "",
+   /* AutoRun              */ "", "",
+   /* Open                 */ "B", "",
+   /* Weapon_Fire          */ "A", "",
+   /* Weapon_Special_Fire  */ "R2", "",
+   /* Aim_Up               */ "Fn_X", "",
+   /* Aim_Down             */ "Fn_B", "",
+   /* Aim_Center           */ "Fn_Y", "",
+   /* Look_Up              */ "", "",
+   /* Look_Down            */ "", "",
+   /* Tilt_Left            */ "", "",
+   /* Tilt_Right           */ "", "",
+   /* Weapon_1             */ "", "",
+   /* Weapon_2             */ "", "",
+   /* Weapon_3             */ "", "",
+   /* Weapon_4             */ "", "",
+   /* Weapon_5             */ "", "",
+   /* Weapon_6             */ "", "",
+   /* Weapon_7             */ "", "",
+   /* Weapon_8             */ "", "",
+   /* Weapon_9             */ "", "",
+   /* Weapon_10            */ "", "",
+   /* Inventory_Use        */ "Fn_A", "",
+   /* Inventory_Left       */ "Fn_Down", "",
+   /* Inventory_Right      */ "Fn_Up", "",
+   /* Map_Toggle           */ "Fn_L2", "",
+   /* Map_Follow_Mode      */ "", "",
+   /* Shrink_Screen        */ "", "",
+   /* Enlarge_Screen       */ "", "",
+   /* Send_Message         */ "", "",
+   /* See_Coop_View        */ "", "",
+   /* See_Chase_View       */ "", "",
+   /* Mouse_Aiming         */ "", "",
+   /* Toggle_Crosshair     */ "", "",
+   /* Next_Weapon          */ "Fn_Right", "",
+   /* Previous_Weapon      */ "Fn_Left", "",
+   /* Holster_Weapon       */ "", "",
+   /* Show_Opponents_Weapon*/ "", "",
+   /* BeastVision          */ "", "",
+   /* CrystalBall          */ "", "",
+   /* JumpBoots            */ "", "",
+   /* MedKit               */ "", "",
+   /* ProximityBombs       */ "", "",
+   /* RemoteBombs          */ "", "",
+   /* Show_Console         */ "", "",
+   /* Quick_Save           */ "Fn_R1", "",
+   /* Quick_Load           */ "Fn_L1", "",
+   };
+#else
 const char keydefaults[NUMGAMEFUNCTIONS*2][MAXGAMEFUNCLEN] =
    {
    "W", "Kpad8",
@@ -158,7 +220,7 @@ const char keydefaults[NUMGAMEFUNCTIONS*2][MAXGAMEFUNCLEN] =
    "R", "",
    "`", "",
    };
-
+#endif
 const char oldkeydefaults[NUMGAMEFUNCTIONS*2][MAXGAMEFUNCLEN] =
    {
    "Up", "Kpad8",
