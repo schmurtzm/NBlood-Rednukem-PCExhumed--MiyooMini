@@ -85,13 +85,13 @@ unsigned int GetWaveValue(unsigned int nPhase, int nType)
     return nPhase;
 }
 
-char SetSpriteState(int nSprite, XSPRITE* pXSprite, int nState)
+char SetSpriteState(int nSprite, XSPRITE* pXSprite, int nState, int causerID)
 {
     if ((pXSprite->busy & 0xffff) == 0 && pXSprite->state == nState)
         return 0;
     pXSprite->busy = nState << 16;
     pXSprite->state = nState;
-    evKill(nSprite, 3);
+    evKill(nSprite, 3, causerID);
     if ((sprite[nSprite].flags & kHitagRespawn) != 0 && sprite[nSprite].inittype >= kDudeBase && sprite[nSprite].inittype < kDudeMax)
     {
         pXSprite->respawnPending = 3;
@@ -99,93 +99,104 @@ char SetSpriteState(int nSprite, XSPRITE* pXSprite, int nState)
         return 1;
     }
     if (pXSprite->restState != nState && pXSprite->waitTime > 0)
-        evPost(nSprite, 3, (pXSprite->waitTime * 120) / 10, pXSprite->restState ? kCmdOn : kCmdOff);
+        evPost(nSprite, 3, (pXSprite->waitTime * 120) / 10, pXSprite->restState ? kCmdOn : kCmdOff, causerID);
     if (pXSprite->txID)
     {
         if (pXSprite->command != kCmdLink && pXSprite->triggerOn && pXSprite->state)
-            evSend(nSprite, 3, pXSprite->txID, (COMMAND_ID)pXSprite->command);
+            evSend(nSprite, 3, pXSprite->txID, (COMMAND_ID)pXSprite->command, causerID);
         if (pXSprite->command != kCmdLink && pXSprite->triggerOff && !pXSprite->state)
-            evSend(nSprite, 3, pXSprite->txID, (COMMAND_ID)pXSprite->command);
+            evSend(nSprite, 3, pXSprite->txID, (COMMAND_ID)pXSprite->command, causerID);
     }
     return 1;
 }
 
 
 
-char SetWallState(int nWall, XWALL *pXWall, int nState)
+char SetWallState(int nWall, XWALL *pXWall, int nState, int causerID)
 {
     if ((pXWall->busy&0xffff) == 0 && pXWall->state == nState)
         return 0;
     pXWall->busy = nState<<16;
     pXWall->state = nState;
-    evKill(nWall, 0);
+    evKill(nWall, 0, causerID);
     if (pXWall->restState != nState && pXWall->waitTime > 0)
-        evPost(nWall, 0, (pXWall->waitTime*120) / 10, pXWall->restState ? kCmdOn : kCmdOff);
+        evPost(nWall, 0, (pXWall->waitTime*120) / 10, pXWall->restState ? kCmdOn : kCmdOff, causerID);
     if (pXWall->txID)
     {
         if (pXWall->command != kCmdLink && pXWall->triggerOn && pXWall->state)
-            evSend(nWall, 0, pXWall->txID, (COMMAND_ID)pXWall->command);
+            evSend(nWall, 0, pXWall->txID, (COMMAND_ID)pXWall->command, causerID);
         if (pXWall->command != kCmdLink && pXWall->triggerOff && !pXWall->state)
-            evSend(nWall, 0, pXWall->txID, (COMMAND_ID)pXWall->command);
+            evSend(nWall, 0, pXWall->txID, (COMMAND_ID)pXWall->command, causerID);
     }
     return 1;
 }
 
-char SetSectorState(int nSector, XSECTOR *pXSector, int nState)
+char SetSectorState(int nSector, XSECTOR *pXSector, int nState, int causerID)
 {
     if ((pXSector->busy&0xffff) == 0 && pXSector->state == nState)
         return 0;
     pXSector->busy = nState<<16;
     pXSector->state = nState;
-    evKill(nSector, 6);
+    evKill(nSector, 6, causerID);
     if (nState == 1)
     {
         if (pXSector->command != kCmdLink && pXSector->triggerOn && pXSector->txID)
-            evSend(nSector, 6, pXSector->txID, (COMMAND_ID)pXSector->command);
+            evSend(nSector, 6, pXSector->txID, (COMMAND_ID)pXSector->command, causerID);
         if (pXSector->stopOn)
         {
             pXSector->stopOn = 0;
             pXSector->stopOff = 0;
         }
         else if (pXSector->reTriggerA)
-            evPost(nSector, 6, (pXSector->waitTimeA * 120) / 10, kCmdOff);
+            evPost(nSector, 6, (pXSector->waitTimeA * 120) / 10, kCmdOff, causerID);
     }
     else
     {
         if (pXSector->command != kCmdLink && pXSector->triggerOff && pXSector->txID)
-            evSend(nSector, 6, pXSector->txID, (COMMAND_ID)pXSector->command);
+            evSend(nSector, 6, pXSector->txID, (COMMAND_ID)pXSector->command, causerID);
         if (pXSector->stopOff)
         {
             pXSector->stopOn = 0;
             pXSector->stopOff = 0;
         }
         else if (pXSector->reTriggerB)
-            evPost(nSector, 6, (pXSector->waitTimeB * 120) / 10, kCmdOn);
+            evPost(nSector, 6, (pXSector->waitTimeB * 120) / 10, kCmdOn, causerID);
     }
     return 1;
 }
 
 int gBusyCount = 0;
-BUSY gBusy[];
+BUSY gBusy[kMaxBusyCount];
 
 void AddBusy(int a1, BUSYID a2, int nDelta)
 {
     dassert(nDelta != 0);
+    
     int i;
     for (i = 0; i < gBusyCount; i++)
     {
         if (gBusy[i].at0 == a1 && gBusy[i].atc == a2)
             break;
     }
+
     if (i == gBusyCount)
     {
-        if (gBusyCount == kMaxBusyCount)
+    #ifdef NOONE_EXTENSIONS
+        if ((!gModernMap && gBusyCount >= kMaxBusyCountVanilla) || gBusyCount >= kMaxBusyCount)
+    #else
+        if (gBusyCount >= kMaxBusyCountVanilla)
+    #endif
+        {
+            consoleSysMsg("Failed to AddBusy for #%d! Max busy reached (%d)", a1, gBusyCount);
             return;
+        }
+
         gBusy[i].at0 = a1;
         gBusy[i].atc = a2;
         gBusy[i].at8 = nDelta > 0 ? 0 : 65536;
         gBusyCount++;
     }
+
     gBusy[i].at4 = nDelta;
 }
 
@@ -202,7 +213,7 @@ void ReverseBusy(int a1, BUSYID a2)
     }
 }
 
-unsigned int GetSourceBusy(EVENT a1)
+unsigned int GetSourceBusy(const EVENT &a1)
 {
     int nIndex = a1.index;
     switch (a1.type)
@@ -229,7 +240,7 @@ unsigned int GetSourceBusy(EVENT a1)
     return 0;
 }
 
-void LifeLeechOperate(spritetype *pSprite, XSPRITE *pXSprite, EVENT event)
+void LifeLeechOperate(spritetype *pSprite, XSPRITE *pXSprite, const EVENT &event)
 {
     switch (event.cmd) {
     case kCmdSpritePush:
@@ -311,8 +322,9 @@ void LifeLeechOperate(spritetype *pSprite, XSPRITE *pXSprite, EVENT event)
 
 void ActivateGenerator(int);
 
-void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
+void OperateSprite(int nSprite, XSPRITE *pXSprite, const EVENT &event)
 {
+    int causerID = event.causer;
     spritetype *pSprite = &sprite[nSprite];
     
     #ifdef NOONE_EXTENSIONS
@@ -336,7 +348,7 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
         
         switch (event.cmd) {
             case kCmdOff:
-                SetSpriteState(nSprite, pXSprite, 0);
+                SetSpriteState(nSprite, pXSprite, 0, causerID);
                 break;
             case kCmdSpriteProximity:
                 if (pXSprite->state) break;
@@ -344,7 +356,7 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
             case kCmdOn:
             case kCmdSpritePush:
             case kCmdSpriteTouch:
-                if (!pXSprite->state) SetSpriteState(nSprite, pXSprite, 1);
+                if (!pXSprite->state) SetSpriteState(nSprite, pXSprite, 1, causerID);
                 aiActivateDude(pSprite, pXSprite);
                 break;
         }
@@ -358,11 +370,11 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
         if (pXSprite->health <= 0) break; 
         switch (event.cmd) {
             case kCmdOff:
-                if (!SetSpriteState(nSprite, pXSprite, 0)) break;
+                if (!SetSpriteState(nSprite, pXSprite, 0, causerID)) break;
                 seqSpawn(40, 3, pSprite->extra, -1);
                 break;
             case kCmdOn:
-                if (!SetSpriteState(nSprite, pXSprite, 1)) break;
+                if (!SetSpriteState(nSprite, pXSprite, 1, causerID)) break;
                 seqSpawn(38, 3, pSprite->extra, nMGunOpenClient);
                 if (pXSprite->data1 > 0)
                     pXSprite->data2 = pXSprite->data1;
@@ -370,15 +382,15 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
         }
         break;
     case kThingFallingRock:
-        if (SetSpriteState(nSprite, pXSprite, 1))
+        if (SetSpriteState(nSprite, pXSprite, 1, causerID))
             pSprite->flags |= 7;
         break;
     case kThingWallCrack:
-        if (SetSpriteState(nSprite, pXSprite, 0))
+        if (SetSpriteState(nSprite, pXSprite, 0, causerID))
             actPostSprite(nSprite, kStatFree);
         break;
     case kThingCrateFace:
-        if (SetSpriteState(nSprite, pXSprite, 0))
+        if (SetSpriteState(nSprite, pXSprite, 0, causerID))
             actPostSprite(nSprite, kStatFree);
         break;
     case kTrapZapSwitchable:
@@ -403,12 +415,12 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
     case kTrapFlame:
         switch (event.cmd) {
             case kCmdOff:
-                if (!SetSpriteState(nSprite, pXSprite, 0)) break;
+                if (!SetSpriteState(nSprite, pXSprite, 0, causerID)) break;
                 seqSpawn(40, 3, pSprite->extra, -1);
                 sfxKill3DSound(pSprite, 0, -1);
                 break;
             case kCmdOn:
-                if (!SetSpriteState(nSprite, pXSprite, 1)) break;
+                if (!SetSpriteState(nSprite, pXSprite, 1, causerID)) break;
                 seqSpawn(38, 3, pSprite->extra, -1);
                 sfxPlay3DSound(pSprite, 441, 0, 0);
                 break;
@@ -417,14 +429,14 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
     case kSwitchPadlock:
         switch (event.cmd) {
             case kCmdOff:
-                SetSpriteState(nSprite, pXSprite, 0);
+                SetSpriteState(nSprite, pXSprite, 0, causerID);
                 break;
             case kCmdOn:
-                if (!SetSpriteState(nSprite, pXSprite, 1)) break;
+                if (!SetSpriteState(nSprite, pXSprite, 1, causerID)) break;
                 seqSpawn(37, 3, pSprite->extra, -1);
                 break;
             default:
-                SetSpriteState(nSprite, pXSprite, pXSprite->state ^ 1);
+                SetSpriteState(nSprite, pXSprite, pXSprite->state ^ 1, causerID);
                 if (pXSprite->state) seqSpawn(37, 3, pSprite->extra, -1);
                 break;
         }
@@ -432,15 +444,15 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
     case kSwitchToggle:
         switch (event.cmd) {
             case kCmdOff:
-                if (!SetSpriteState(nSprite, pXSprite, 0)) break;
+                if (!SetSpriteState(nSprite, pXSprite, 0, causerID)) break;
                 sfxPlay3DSound(pSprite, pXSprite->data2, 0, 0);
                 break;
             case kCmdOn:
-                if (!SetSpriteState(nSprite, pXSprite, 1)) break;
+                if (!SetSpriteState(nSprite, pXSprite, 1, causerID)) break;
                 sfxPlay3DSound(pSprite, pXSprite->data1, 0, 0);
                 break;
             default:
-                if (!SetSpriteState(nSprite, pXSprite, pXSprite->state ^ 1)) break;
+                if (!SetSpriteState(nSprite, pXSprite, pXSprite->state ^ 1, causerID)) break;
                 if (pXSprite->state) sfxPlay3DSound(pSprite, pXSprite->data1, 0, 0);
                 else sfxPlay3DSound(pSprite, pXSprite->data2, 0, 0);
                 break;
@@ -449,15 +461,15 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
     case kSwitchOneWay:
         switch (event.cmd) {
             case kCmdOff:
-                if (!SetSpriteState(nSprite, pXSprite, 0)) break;
+                if (!SetSpriteState(nSprite, pXSprite, 0, causerID)) break;
                 sfxPlay3DSound(pSprite, pXSprite->data2, 0, 0);
                 break;
             case kCmdOn:
-                if (!SetSpriteState(nSprite, pXSprite, 1)) break;
+                if (!SetSpriteState(nSprite, pXSprite, 1, causerID)) break;
                 sfxPlay3DSound(pSprite, pXSprite->data1, 0, 0);
                 break;
             default:
-                if (!SetSpriteState(nSprite, pXSprite, pXSprite->restState ^ 1)) break;
+                if (!SetSpriteState(nSprite, pXSprite, pXSprite->restState ^ 1, causerID)) break;
                 if (pXSprite->state) sfxPlay3DSound(pSprite, pXSprite->data1, 0, 0);
                 else sfxPlay3DSound(pSprite, pXSprite->data2, 0, 0);
                 break;
@@ -480,12 +492,12 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
         sfxPlay3DSound(pSprite, pXSprite->data4, -1, 0);
         
         if (pXSprite->command == kCmdLink && pXSprite->txID > 0)
-            evSend(nSprite, 3, pXSprite->txID, kCmdLink);
+            evSend(nSprite, 3, pXSprite->txID, kCmdLink, causerID);
 
         if (pXSprite->data1 == pXSprite->data2) 
-            SetSpriteState(nSprite, pXSprite, 1);
+            SetSpriteState(nSprite, pXSprite, 1, causerID);
         else 
-            SetSpriteState(nSprite, pXSprite, 0);
+            SetSpriteState(nSprite, pXSprite, 0, causerID);
 
         break;
     case kMarkerDudeSpawn:
@@ -516,7 +528,7 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
     case kMarkerEarthQuake:
         pXSprite->triggerOn = 0;
         pXSprite->isTriggered = 1;
-        SetSpriteState(nSprite, pXSprite, 1);
+        SetSpriteState(nSprite, pXSprite, 1, causerID);
         for (int p = connecthead; p >= 0; p = connectpoint2[p]) {
             spritetype *pPlayerSprite = gPlayer[p].pSprite;
             int dx = (pSprite->x - pPlayerSprite->x)>>4;
@@ -537,7 +549,7 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
     case kTrapExploder:
         switch (event.cmd) {
             case kCmdOn:
-                SetSpriteState(nSprite, pXSprite, 1);
+                SetSpriteState(nSprite, pXSprite, 1, causerID);
                 break;
             default:
                 pSprite->cstat &= (unsigned short)~CSTAT_SPRITE_INVISIBLE;
@@ -550,7 +562,7 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
             if (event.cmd != kCmdOn) actExplodeSprite(pSprite);
             else {
                 sfxPlay3DSound(pSprite, 454, 0, 0);
-                evPost(nSprite, 3, 18, kCmdOff);
+                evPost(nSprite, 3, 18, kCmdOff, causerID);
             }
         }
         break;    
@@ -560,7 +572,7 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
                 case kCmdSpriteProximity:
                     if (pXSprite->state) break;
                     sfxPlay3DSound(pSprite, 452, 0, 0);
-                    evPost(nSprite, 3, 30, kCmdOff);
+                    evPost(nSprite, 3, 30, kCmdOff, causerID);
                     pXSprite->state = 1;
                     fallthrough__;
                 case kCmdOn:
@@ -587,26 +599,26 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
     case kGenSound:
         switch (event.cmd) {
             case kCmdOff:
-                SetSpriteState(nSprite, pXSprite, 0);
+                SetSpriteState(nSprite, pXSprite, 0, causerID);
                 break;
             case kCmdRepeat:
                 if (pSprite->type != kGenTrigger) ActivateGenerator(nSprite);
-                if (pXSprite->txID) evSend(nSprite, 3, pXSprite->txID, (COMMAND_ID)pXSprite->command);
+                if (pXSprite->txID) evSend(nSprite, 3, pXSprite->txID, (COMMAND_ID)pXSprite->command, causerID);
                 if (pXSprite->busyTime > 0) {
                     int nRand = Random2(pXSprite->data1);
-                    evPost(nSprite, 3, 120*(nRand+pXSprite->busyTime) / 10, kCmdRepeat);
+                    evPost(nSprite, 3, 120*(nRand+pXSprite->busyTime) / 10, kCmdRepeat, causerID);
                 }
                 break;
             default:
                 if (!pXSprite->state) {
-                    SetSpriteState(nSprite, pXSprite, 1);
-                    evPost(nSprite, 3, 0, kCmdRepeat);
+                    SetSpriteState(nSprite, pXSprite, 1, causerID);
+                    evPost(nSprite, 3, 0, kCmdRepeat, causerID);
                 }
                 break;
         }
         break;
     case kSoundPlayer:
-        if (gGameOptions.nGameType == 0)
+        if (gGameOptions.nGameType == kGameTypeSinglePlayer)
         {
             if (gMe->pXSprite->health <= 0)
                 break;
@@ -621,15 +633,15 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
     case kThingZombieHead:
         switch (event.cmd) {
             case kCmdOff:
-                if (!SetSpriteState(nSprite, pXSprite, 0)) break;
+                if (!SetSpriteState(nSprite, pXSprite, 0, causerID)) break;
                 actActivateGibObject(pSprite, pXSprite);
                 break;
             case kCmdOn:
-                if (!SetSpriteState(nSprite, pXSprite, 1)) break;
+                if (!SetSpriteState(nSprite, pXSprite, 1, causerID)) break;
                 actActivateGibObject(pSprite, pXSprite);
                 break;
             default:
-                if (!SetSpriteState(nSprite, pXSprite, pXSprite->state ^ 1)) break;
+                if (!SetSpriteState(nSprite, pXSprite, pXSprite->state ^ 1, causerID)) break;
                 actActivateGibObject(pSprite, pXSprite);
                 break;
         }
@@ -637,13 +649,13 @@ void OperateSprite(int nSprite, XSPRITE *pXSprite, EVENT event)
     default:
         switch (event.cmd) {
             case kCmdOff:
-                SetSpriteState(nSprite, pXSprite, 0);
+                SetSpriteState(nSprite, pXSprite, 0, causerID);
                 break;
             case kCmdOn:
-                SetSpriteState(nSprite, pXSprite, 1);
+                SetSpriteState(nSprite, pXSprite, 1, causerID);
                 break;
             default:
-                SetSpriteState(nSprite, pXSprite, pXSprite->state ^ 1);
+                SetSpriteState(nSprite, pXSprite, pXSprite->state ^ 1, causerID);
                 break;
         }
         break;
@@ -680,7 +692,9 @@ void SetupGibWallState(walltype *pWall, XWALL *pXWall)
     }
 }
 
-void OperateWall(int nWall, XWALL *pXWall, EVENT event) {
+void OperateWall(int nWall, XWALL *pXWall, const EVENT &event) {
+    
+    int causerID = event.causer;
     walltype *pWall = &wall[nWall];
     
     switch (event.cmd) {
@@ -707,13 +721,13 @@ void OperateWall(int nWall, XWALL *pXWall, EVENT event) {
             switch (event.cmd) {
                 case kCmdOn:
                 case kCmdWallImpact:
-                    bStatus = SetWallState(nWall, pXWall, 1);
+                    bStatus = SetWallState(nWall, pXWall, 1, causerID);
                     break;
                 case kCmdOff:
-                    bStatus = SetWallState(nWall, pXWall, 0);
+                    bStatus = SetWallState(nWall, pXWall, 0, causerID);
                     break;
                 default:
-                    bStatus = SetWallState(nWall, pXWall, pXWall->state ^ 1);
+                    bStatus = SetWallState(nWall, pXWall, pXWall->state ^ 1, causerID);
                     break;
             }
 
@@ -730,13 +744,13 @@ void OperateWall(int nWall, XWALL *pXWall, EVENT event) {
         default:
             switch (event.cmd) {
                 case kCmdOff:
-                    SetWallState(nWall, pXWall, 0);
+                    SetWallState(nWall, pXWall, 0, causerID);
                     break;
                 case kCmdOn:
-                    SetWallState(nWall, pXWall, 1);
+                    SetWallState(nWall, pXWall, 1, causerID);
                     break;
                 default:
-                    SetWallState(nWall, pXWall, pXWall->state ^ 1);
+                    SetWallState(nWall, pXWall, pXWall->state ^ 1, causerID);
                     break;
             }
             return;
@@ -857,6 +871,14 @@ void TranslateSector(int nSector, int a2, int a3, int a4, int a5, int a6, int a7
     int vbp = interpolate(a8, a11, a3);
     int v14 = vbp - v44;
     int nWall = sector[nSector].wallptr;
+    
+    #ifdef NOONE_EXTENSIONS
+    // fix Y arg in RotatePoint for reverse (green) moving sprites?
+    int sprDy = (gModernMap) ? a5 : a4;
+    #else
+    int sprDy = a4;
+    #endif
+
     if (bAllWalls)
     {
         for (int i = 0; i < sector[nSector].wallnum; nWall++, i++)
@@ -936,7 +958,7 @@ void TranslateSector(int nSector, int a2, int a3, int a4, int a5, int a6, int a7
         else if (sprite[nSprite].cstat&16384)
         {
             if (vbp)
-                RotatePoint((int*)& x, (int*)& y, -vbp, a4, a4);
+                RotatePoint((int*)& x, (int*)& y, -vbp, a4, sprDy);
             viewBackupSpriteLoc(nSprite, pSprite);
             pSprite->ang = (pSprite->ang-v14)&2047;
             pSprite->x = x-(vc-a4);
@@ -959,17 +981,68 @@ void TranslateSector(int nSector, int a2, int a3, int a4, int a5, int a6, int a7
             }
         }
     }
+
+    #ifdef NOONE_EXTENSIONS
+    // translate sprites near outside walls
+    ////////////////////////////////////////////////////////////
+    
+    int nSprite, *ptr;
+    if (gModernMap && (ptr = gSprNSect.GetSprPtr(nSector)) != NULL)
+    {
+        while (*ptr >= 0)
+        {
+            spritetype* pSprite = &sprite[*ptr++];
+            if (pSprite->statnum >= kMaxStatus)
+                continue;
+
+            nSprite = pSprite->index;
+            x = baseSprite[nSprite].x;
+            y = baseSprite[nSprite].y;
+            if (pSprite->cstat & 8192)
+            {
+                if (vbp)
+                    RotatePoint((int*)&x, (int*)&y, vbp, a4, a5);
+                viewBackupSpriteLoc(nSprite, pSprite);
+                pSprite->ang = (pSprite->ang + v14) & 2047;
+                pSprite->x = x + vc - a4;
+                pSprite->y = y + v8 - a5;
+            }
+            else if (pSprite->cstat & 16384)
+            {
+                if (vbp)
+                    RotatePoint((int*)&x, (int*)&y, -vbp, a4, sprDy);
+                viewBackupSpriteLoc(nSprite, pSprite);
+                pSprite->ang = (pSprite->ang - v14) & 2047;
+                pSprite->x = x - (vc - a4);
+                pSprite->y = y - (v8 - a5);
+            }
+        }
+    }
+    /////////////////////
+    #endif
+
 }
 
 void ZTranslateSector(int nSector, XSECTOR *pXSector, int a3, int a4)
 {
     sectortype *pSector = &sector[nSector];
     viewInterpolateSector(nSector, pSector);
-    int dz = pXSector->onFloorZ-pXSector->offFloorZ;
-    if (dz != 0)
+
+    int *ptr1 = NULL, *ptr2;
+    int dfz = pXSector->onFloorZ - pXSector->offFloorZ;
+    int dcz = pXSector->onCeilZ - pXSector->offCeilZ;
+    
+    #ifdef NOONE_EXTENSIONS
+    // get pointer to sprites near outside walls before translation
+    ///////////////////////////////////////////////////////////////
+    if (gModernMap && (dfz || dcz))
+        ptr1 = gSprNSect.GetSprPtr(nSector);
+    #endif
+
+    if (dfz != 0)
     {
         int oldZ = pSector->floorz;
-        baseFloor[nSector] = pSector->floorz = pXSector->offFloorZ + mulscale16(dz, GetWaveValue(a3, a4));
+        baseFloor[nSector] = pSector->floorz = pXSector->offFloorZ + mulscale16(dfz, GetWaveValue(a3, a4));
         velFloor[nSector] += (pSector->floorz-oldZ)<<8;
         for (int nSprite = headspritesect[nSector]; nSprite >= 0; nSprite = nextspritesect[nSprite])
         {
@@ -991,12 +1064,31 @@ void ZTranslateSector(int nSector, XSECTOR *pXSector, int a3, int a4)
                 pSprite->z += pSector->floorz-oldZ;
             }
         }
+        
+        #ifdef NOONE_EXTENSIONS
+        // translate sprites near outside walls (floor)
+        ////////////////////////////////////////////////////////////
+        if (ptr1)
+        {
+            ptr2 = ptr1;
+            while (*ptr2 >= 0)
+            {
+                spritetype* pSprite = &sprite[*ptr2++];
+                if (pSprite->statnum < kMaxStatus && (pSprite->cstat & 8192))
+                {
+                    viewBackupSpriteLoc(pSprite->index, pSprite);
+                    pSprite->z += pSector->floorz - oldZ;
+                }
+            }
+        }
+        /////////////////////
+        #endif
     }
-    dz = pXSector->onCeilZ-pXSector->offCeilZ;
-    if (dz != 0)
+
+    if (dcz != 0)
     {
         int oldZ = pSector->ceilingz;
-        baseCeil[nSector] = pSector->ceilingz = pXSector->offCeilZ + mulscale16(dz, GetWaveValue(a3, a4));
+        baseCeil[nSector] = pSector->ceilingz = pXSector->offCeilZ + mulscale16(dcz, GetWaveValue(a3, a4));
         velCeil[nSector] += pSector->ceilingz-oldZ;
         for (int nSprite = headspritesect[nSector]; nSprite >= 0; nSprite = nextspritesect[nSprite])
         {
@@ -1009,6 +1101,25 @@ void ZTranslateSector(int nSector, XSECTOR *pXSector, int a3, int a4)
                 pSprite->z += pSector->ceilingz-oldZ;
             }
         }
+        
+        #ifdef NOONE_EXTENSIONS
+        // translate sprites near outside walls (ceil)
+        ////////////////////////////////////////////////////////////
+        if (ptr1)
+        {
+            ptr2 = ptr1;
+            while (*ptr2 >= 0)
+            {
+                spritetype* pSprite = &sprite[*ptr2++];
+                if (pSprite->statnum < kMaxStatus && (pSprite->cstat & 16384))
+                {
+                    viewBackupSpriteLoc(pSprite->index, pSprite);
+                    pSprite->z += pSector->ceilingz - oldZ;
+                }
+            }
+        }
+        /////////////////////
+        #endif
     }
 }
 
@@ -1059,7 +1170,7 @@ int GetCrushedSpriteExtents(unsigned int nSector, int *pzTop, int *pzBot)
     return vc;
 }
 
-int VCrushBusy(unsigned int nSector, unsigned int a2)
+int VCrushBusy(unsigned int nSector, unsigned int a2, int causerID)
 {
     dassert(nSector < (unsigned int)numsectors);
     int nXSector = sector[nSector].extra;
@@ -1088,17 +1199,17 @@ int VCrushBusy(unsigned int nSector, unsigned int a2)
         sector[nSector].floorz = v10;
     pXSector->busy = a2;
     if (pXSector->command == kCmdLink && pXSector->txID)
-        evSend(nSector, 6, pXSector->txID, kCmdLink);
+        evSend(nSector, 6, pXSector->txID, kCmdLink, causerID);
     if ((a2&0xffff) == 0)
     {
-        SetSectorState(nSector, pXSector, a2>>16);
+        SetSectorState(nSector, pXSector, a2>>16, causerID);
         SectorEndSound(nSector, a2>>16);
         return 3;
     }
     return 0;
 }
 
-int VSpriteBusy(unsigned int nSector, unsigned int a2)
+int VSpriteBusy(unsigned int nSector, unsigned int a2, int causerID)
 {
     dassert(nSector < (unsigned int)numsectors);
     int nXSector = sector[nSector].extra;
@@ -1137,17 +1248,17 @@ int VSpriteBusy(unsigned int nSector, unsigned int a2)
     }
     pXSector->busy = a2;
     if (pXSector->command == kCmdLink && pXSector->txID)
-        evSend(nSector, 6, pXSector->txID, kCmdLink);
+        evSend(nSector, 6, pXSector->txID, kCmdLink, causerID);
     if ((a2&0xffff) == 0)
     {
-        SetSectorState(nSector, pXSector, a2>>16);
+        SetSectorState(nSector, pXSector, a2>>16, causerID);
         SectorEndSound(nSector, a2>>16);
         return 3;
     }
     return 0;
 }
 
-int VDoorBusy(unsigned int nSector, unsigned int a2)
+int VDoorBusy(unsigned int nSector, unsigned int a2, int causerID)
 {
     dassert(nSector < (unsigned int)numsectors);
     int nXSector = sector[nSector].extra;
@@ -1236,17 +1347,17 @@ int VDoorBusy(unsigned int nSector, unsigned int a2)
     ZTranslateSector(nSector, pXSector, a2, nWave);
     pXSector->busy = a2;
     if (pXSector->command == kCmdLink && pXSector->txID)
-        evSend(nSector, 6, pXSector->txID, kCmdLink);
+        evSend(nSector, 6, pXSector->txID, kCmdLink, causerID);
     if ((a2&0xffff) == 0)
     {
-        SetSectorState(nSector, pXSector, a2>>16);
+        SetSectorState(nSector, pXSector, a2>>16, causerID);
         SectorEndSound(nSector, a2>>16);
         return 3;
     }
     return 0;
 }
 
-int HDoorBusy(unsigned int nSector, unsigned int a2)
+int HDoorBusy(unsigned int nSector, unsigned int a2, int causerID)
 {
     dassert(nSector < (unsigned int)numsectors);
     sectortype *pSector = &sector[nSector];
@@ -1264,17 +1375,17 @@ int HDoorBusy(unsigned int nSector, unsigned int a2)
     ZTranslateSector(nSector, pXSector, a2, nWave);
     pXSector->busy = a2;
     if (pXSector->command == kCmdLink && pXSector->txID)
-        evSend(nSector, 6, pXSector->txID, kCmdLink);
+        evSend(nSector, 6, pXSector->txID, kCmdLink, causerID);
     if ((a2&0xffff) == 0)
     {
-        SetSectorState(nSector, pXSector, a2>>16);
+        SetSectorState(nSector, pXSector, a2>>16, causerID);
         SectorEndSound(nSector, a2>>16);
         return 3;
     }
     return 0;
 }
 
-int RDoorBusy(unsigned int nSector, unsigned int a2)
+int RDoorBusy(unsigned int nSector, unsigned int a2, int causerID)
 {
     dassert(nSector < (unsigned int)numsectors);
     sectortype *pSector = &sector[nSector];
@@ -1291,17 +1402,17 @@ int RDoorBusy(unsigned int nSector, unsigned int a2)
     ZTranslateSector(nSector, pXSector, a2, nWave);
     pXSector->busy = a2;
     if (pXSector->command == kCmdLink && pXSector->txID)
-        evSend(nSector, 6, pXSector->txID, kCmdLink);
+        evSend(nSector, 6, pXSector->txID, kCmdLink, causerID);
     if ((a2&0xffff) == 0)
     {
-        SetSectorState(nSector, pXSector, a2>>16);
+        SetSectorState(nSector, pXSector, a2>>16, causerID);
         SectorEndSound(nSector, a2>>16);
         return 3;
     }
     return 0;
 }
 
-int StepRotateBusy(unsigned int nSector, unsigned int a2)
+int StepRotateBusy(unsigned int nSector, unsigned int a2, int causerID)
 {
     dassert(nSector < (unsigned int)numsectors);
     sectortype *pSector = &sector[nSector];
@@ -1324,10 +1435,10 @@ int StepRotateBusy(unsigned int nSector, unsigned int a2)
     }
     pXSector->busy = a2;
     if (pXSector->command == kCmdLink && pXSector->txID)
-        evSend(nSector, 6, pXSector->txID, kCmdLink);
+        evSend(nSector, 6, pXSector->txID, kCmdLink, causerID);
     if ((a2&0xffff) == 0)
     {
-        SetSectorState(nSector, pXSector, a2>>16);
+        SetSectorState(nSector, pXSector, a2>>16, causerID);
         SectorEndSound(nSector, a2>>16);
         pXSector->data = vbp&2047;
         return 3;
@@ -1335,7 +1446,7 @@ int StepRotateBusy(unsigned int nSector, unsigned int a2)
     return 0;
 }
 
-int GenSectorBusy(unsigned int nSector, unsigned int a2)
+int GenSectorBusy(unsigned int nSector, unsigned int a2, int causerID)
 {
     dassert(nSector < (unsigned int)numsectors);
     sectortype *pSector = &sector[nSector];
@@ -1344,17 +1455,17 @@ int GenSectorBusy(unsigned int nSector, unsigned int a2)
     XSECTOR *pXSector = &xsector[nXSector];
     pXSector->busy = a2;
     if (pXSector->command == kCmdLink && pXSector->txID)
-        evSend(nSector, 6, pXSector->txID, kCmdLink);
+        evSend(nSector, 6, pXSector->txID, kCmdLink, causerID);
     if ((a2&0xffff) == 0)
     {
-        SetSectorState(nSector, pXSector, a2>>16);
+        SetSectorState(nSector, pXSector, a2>>16, causerID);
         SectorEndSound(nSector, a2>>16);
         return 3;
     }
     return 0;
 }
 
-int PathBusy(unsigned int nSector, unsigned int a2)
+int PathBusy(unsigned int nSector, unsigned int a2, int causerID)
 {
     dassert(nSector < (unsigned int)numsectors);
     sectortype *pSector = &sector[nSector];
@@ -1372,7 +1483,7 @@ int PathBusy(unsigned int nSector, unsigned int a2)
     pXSector->busy = a2;
     if ((a2&0xffff) == 0)
     {
-        evPost(nSector, 6, (120*pXSprite2->waitTime)/10, kCmdOn);
+        evPost(nSector, 6, (120*pXSprite2->waitTime)/10, kCmdOn, causerID);
         pXSector->state = 0;
         pXSector->busy = 0;
         if (pXSprite1->data4)
@@ -1384,7 +1495,7 @@ int PathBusy(unsigned int nSector, unsigned int a2)
     return 0;
 }
 
-void OperateDoor(unsigned int nSector, XSECTOR *pXSector, EVENT event, BUSYID busyWave) 
+void OperateDoor(unsigned int nSector, XSECTOR *pXSector, const EVENT &event, BUSYID busyWave) 
 {
     switch (event.cmd) {
         case kCmdOff:
@@ -1486,7 +1597,7 @@ void OperateTeleport(unsigned int nSector, XSECTOR *pXSector)
     }
 }
 
-void OperatePath(unsigned int nSector, XSECTOR *pXSector, EVENT event)
+void OperatePath(unsigned int nSector, XSECTOR *pXSector, const EVENT &event)
 {
     int nSprite;
     spritetype *pSprite = NULL;
@@ -1509,7 +1620,7 @@ void OperatePath(unsigned int nSector, XSECTOR *pXSector, EVENT event)
     // trigger marker after it gets reached
     #ifdef NOONE_EXTENSIONS
         if (gModernMap && pXSprite2->state != 1)
-            trTriggerSprite(pSprite2->index, pXSprite2, kCmdOn);
+            trTriggerSprite(pSprite2->index, pXSprite2, kCmdOn, event.causer);
     #endif
 
     if (nSprite < 0) {
@@ -1532,7 +1643,7 @@ void OperatePath(unsigned int nSector, XSECTOR *pXSector, EVENT event)
     }
 }
 
-void OperateSector(unsigned int nSector, XSECTOR *pXSector, EVENT event)
+void OperateSector(unsigned int nSector, XSECTOR *pXSector, const EVENT &event)
 {
     dassert(nSector < (unsigned int)numsectors);
     sectortype *pSector = &sector[nSector];
@@ -1610,13 +1721,13 @@ void OperateSector(unsigned int nSector, XSECTOR *pXSector, EVENT event)
                         
                         switch (event.cmd) {
                             case kCmdOff:
-                                SetSectorState(nSector, pXSector, 0);
+                                SetSectorState(nSector, pXSector, 0, event.causer);
                                 break;
                             case kCmdOn:
-                                SetSectorState(nSector, pXSector, 1);
+                                SetSectorState(nSector, pXSector, 1, event.causer);
                                 break;
                             default:
-                                SetSectorState(nSector, pXSector, pXSector->state ^ 1);
+                                SetSectorState(nSector, pXSector, pXSector->state ^ 1, event.causer);
                                 break;
                         }
 
@@ -1660,37 +1771,37 @@ void InitPath(unsigned int nSector, XSECTOR *pXSector)
     pXSector->marker0 = nSprite;
     basePath[nSector] = nSprite;
     if (pXSector->state)
-        evPost(nSector, 6, 0, kCmdOn);
+        evPost(nSector, 6, 0, kCmdOn, kCauserGame);
 }
 
-void LinkSector(int nSector, XSECTOR *pXSector, EVENT event)
+void LinkSector(int nSector, XSECTOR *pXSector, const EVENT &event)
 {
     sectortype *pSector = &sector[nSector];
     int nBusy = GetSourceBusy(event);
     switch (pSector->type) {
         case kSectorZMotionSprite:
-            VSpriteBusy(nSector, nBusy);
+            VSpriteBusy(nSector, nBusy, event.causer);
             break;
         case kSectorZMotion:
-            VDoorBusy(nSector, nBusy);
+            VDoorBusy(nSector, nBusy, event.causer);
             break;
         case kSectorSlideMarked:
         case kSectorSlide:
-            HDoorBusy(nSector, nBusy);
+            HDoorBusy(nSector, nBusy, event.causer);
             break;
         case kSectorRotateMarked:
         case kSectorRotate:
-            RDoorBusy(nSector, nBusy);
+            RDoorBusy(nSector, nBusy, event.causer);
             break;
         default:
             pXSector->busy = nBusy;
             if ((pXSector->busy&0xffff) == 0)
-                SetSectorState(nSector, pXSector, nBusy>>16);
+                SetSectorState(nSector, pXSector, nBusy>>16, event.causer);
             break;
     }
 }
 
-void LinkSprite(int nSprite, XSPRITE *pXSprite, EVENT event) {
+void LinkSprite(int nSprite, XSPRITE *pXSprite, const EVENT &event) {
     spritetype *pSprite = &sprite[nSprite];
     int nBusy = GetSourceBusy(event);
 
@@ -1704,9 +1815,9 @@ void LinkSprite(int nSprite, XSPRITE *pXSprite, EVENT event) {
                 dassert(nXSprite2 > 0 && nXSprite2 < kMaxXSprites);
                 pXSprite->data1 = xsprite[nXSprite2].data1;
                 if (pXSprite->data1 == pXSprite->data2)
-                    SetSpriteState(nSprite, pXSprite, 1);
+                    SetSpriteState(nSprite, pXSprite, 1, event.causer);
                 else
-                    SetSpriteState(nSprite, pXSprite, 0);
+                    SetSpriteState(nSprite, pXSprite, 0, event.causer);
             }
         }
         break;
@@ -1714,21 +1825,21 @@ void LinkSprite(int nSprite, XSPRITE *pXSprite, EVENT event) {
         {
             pXSprite->busy = nBusy;
             if ((pXSprite->busy & 0xffff) == 0)
-                SetSpriteState(nSprite, pXSprite, nBusy >> 16);
+                SetSpriteState(nSprite, pXSprite, nBusy >> 16, event.causer);
         }
         break;
     }
 }
 
-void LinkWall(int nWall, XWALL *pXWall, EVENT event)
+void LinkWall(int nWall, XWALL *pXWall, const EVENT &event)
 {
     int nBusy = GetSourceBusy(event);
     pXWall->busy = nBusy;
     if ((pXWall->busy & 0xffff) == 0)
-        SetWallState(nWall, pXWall, nBusy>>16);
+        SetWallState(nWall, pXWall, nBusy>>16, event.causer);
 }
 
-void trTriggerSector(unsigned int nSector, XSECTOR *pXSector, int command) {
+void trTriggerSector(unsigned int nSector, XSECTOR *pXSector, int command, int causerID) {
     dassert(nSector < (unsigned int)numsectors);
     if (!pXSector->locked && !pXSector->isTriggered) {
         
@@ -1736,18 +1847,23 @@ void trTriggerSector(unsigned int nSector, XSECTOR *pXSector, int command) {
             pXSector->isTriggered = 1;
         
         if (pXSector->decoupled && pXSector->txID > 0)
-            evSend(nSector, 6, pXSector->txID, (COMMAND_ID)pXSector->command);
+            evSend(nSector, 6, pXSector->txID, (COMMAND_ID)pXSector->command, causerID);
         
         else {
             EVENT event;
             event.cmd = command;
+            #ifdef NOONE_EXTENSIONS
+                event.causer = (gModernMap) ? causerID : kCauserGame;
+            #else
+                event.causer = kCauserGame;
+            #endif
             OperateSector(nSector, pXSector, event);
         }
 
     }
 }
 
-void trTriggerWall(unsigned int nWall, XWALL *pXWall, int command) {
+void trTriggerWall(unsigned int nWall, XWALL *pXWall, int command, int causerID) {
     dassert(nWall < (unsigned int)numwalls);
     if (!pXWall->locked && !pXWall->isTriggered) {
         
@@ -1755,29 +1871,39 @@ void trTriggerWall(unsigned int nWall, XWALL *pXWall, int command) {
             pXWall->isTriggered = 1;
         
         if (pXWall->decoupled && pXWall->txID > 0)
-            evSend(nWall, 0, pXWall->txID, (COMMAND_ID)pXWall->command);
+            evSend(nWall, 0, pXWall->txID, (COMMAND_ID)pXWall->command, causerID);
 
         else {
             EVENT event;
             event.cmd = command;
+            #ifdef NOONE_EXTENSIONS
+                event.causer = (gModernMap) ? causerID : kCauserGame;
+            #else
+                event.causer = kCauserGame;
+            #endif
             OperateWall(nWall, pXWall, event);
         }
 
     }
 }
 
-void trTriggerSprite(unsigned int nSprite, XSPRITE *pXSprite, int command) {
+void trTriggerSprite(unsigned int nSprite, XSPRITE *pXSprite, int command, int causerID) {
     if (!pXSprite->locked && !pXSprite->isTriggered) {
         
         if (pXSprite->triggerOnce)
             pXSprite->isTriggered = 1;
 
         if (pXSprite->Decoupled && pXSprite->txID > 0)
-           evSend(nSprite, 3, pXSprite->txID, (COMMAND_ID)pXSprite->command);
+           evSend(nSprite, 3, pXSprite->txID, (COMMAND_ID)pXSprite->command, causerID);
         
         else {
             EVENT event;
             event.cmd = command;
+            #ifdef NOONE_EXTENSIONS
+                event.causer = (gModernMap) ? causerID : kCauserGame;
+            #else
+                event.causer = kCauserGame;
+            #endif
             OperateSprite(nSprite, pXSprite, event);
         }
 
@@ -1785,7 +1911,7 @@ void trTriggerSprite(unsigned int nSprite, XSPRITE *pXSprite, int command) {
 }
 
 
-void trMessageSector(unsigned int nSector, EVENT event) {
+void trMessageSector(unsigned int nSector, const EVENT &event) {
     dassert(nSector < (unsigned int)numsectors);
     dassert(sector[nSector].extra > 0 && sector[nSector].extra < kMaxXSectors);
     XSECTOR *pXSector = &xsector[sector[nSector].extra];
@@ -1806,7 +1932,7 @@ void trMessageSector(unsigned int nSector, EVENT event) {
     }
 }
 
-void trMessageWall(unsigned int nWall, EVENT event) {
+void trMessageWall(unsigned int nWall, const EVENT &event) {
     dassert(nWall < (unsigned int)numwalls);
     dassert(wall[nWall].extra > 0 && wall[nWall].extra < kMaxXWalls);
     
@@ -1828,7 +1954,7 @@ void trMessageWall(unsigned int nWall, EVENT event) {
     }
 }
 
-void trMessageSprite(unsigned int nSprite, EVENT event) {
+void trMessageSprite(unsigned int nSprite, const EVENT &event) {
     if (sprite[nSprite].statnum == kStatFree)
         return;
     spritetype *pSprite = &sprite[nSprite];
@@ -1948,7 +2074,7 @@ void AlignSlopes(void)
     }
 }
 
-int(*gBusyProc[])(unsigned int, unsigned int) =
+int(*gBusyProc[])(unsigned int, unsigned int, int) =
 {
     VCrushBusy,
     VSpriteBusy,
@@ -1970,10 +2096,10 @@ void trProcessBusy(void)
         int oldBusy = gBusy[i].at8;
         gBusy[i].at8 = ClipRange(oldBusy+gBusy[i].at4*4, 0, 65536);
         #ifdef NOONE_EXTENSIONS
-            if (!gModernMap || !xsector[sector[gBusy[i].at0].extra].unused1) nStatus = gBusyProc[gBusy[i].atc](gBusy[i].at0, gBusy[i].at8);
+            if (!gModernMap || !xsector[sector[gBusy[i].at0].extra].unused1) nStatus = gBusyProc[gBusy[i].atc](gBusy[i].at0, gBusy[i].at8, -1);
             else nStatus = 3; // allow to pause/continue motion for sectors any time by sending special command
         #else
-            nStatus = gBusyProc[gBusy[i].atc](gBusy[i].at0, gBusy[i].at8);
+            nStatus = gBusyProc[gBusy[i].atc](gBusy[i].at0, gBusy[i].at8, -1);
         #endif
         switch (nStatus) {
             case 1:
@@ -1994,106 +2120,133 @@ void trProcessBusy(void)
 
 void InitGenerator(int);
 
+void setBasePoint(int objType, int objIdx)
+{
+    switch (objType) {
+        case 1:
+            baseSprite[objIdx].x = sprite[objIdx].x;
+            baseSprite[objIdx].y = sprite[objIdx].y;
+            baseSprite[objIdx].z = sprite[objIdx].z;
+            break;
+        case 2:
+            baseWall[objIdx].x = wall[objIdx].x;
+            baseWall[objIdx].y = wall[objIdx].y;
+            break;
+        case 3:
+            baseFloor[objIdx] = sector[objIdx].floorz;
+            baseCeil[objIdx] = sector[objIdx].ceilingz;
+            break;
+    }
+}
+
+void setBaseWallSect(int nSect)
+{
+    int swal, ewal;
+    swal = sector[nSect].wallptr;
+    ewal = swal + sector[nSect].wallnum - 1;
+    while(swal <= ewal)
+        setBasePoint(2, swal++);
+}
+
+void setBaseSpriteSect(int nSect)
+{
+    int i;
+    i = headspritesect[nSect];
+    while (i >= 0)
+    {
+        setBasePoint(1, i);
+        i = nextspritesect[i];
+    }
+}
+
 void trInit(void)
 {
     gBusyCount = 0;
-    for (int i = 0; i < numwalls; i++)
-    {
-        baseWall[i].x = wall[i].x;
-        baseWall[i].y = wall[i].y;
-    }
-    for (int i = 0; i < kMaxSprites; i++)
-    {
-        if (sprite[i].statnum < kStatFree)
-        {
-            sprite[i].inittype = sprite[i].type;
-            baseSprite[i].x = sprite[i].x;
-            baseSprite[i].y = sprite[i].y;
-            baseSprite[i].z = sprite[i].z;
-        }
-        else
-            sprite[i].inittype = -1;
-    }
-    for (int i = 0; i < numwalls; i++)
-    {
-        int nXWall = wall[i].extra;
-        dassert(nXWall < kMaxXWalls);
-        if (nXWall > 0)
-        {
-            XWALL *pXWall = &xwall[nXWall];
-            if (pXWall->state)
-                pXWall->busy = 65536;
-        }
-    }
+    spritetype* pMark1, * pMark2;
+    int i, * ptr;
+
     dassert((numsectors >= 0) && (numsectors < kMaxSectors));
-    for (int i = 0; i < numsectors; i++)
+
+#ifdef NOONE_EXTENSIONS
+    if (gModernMap)
+        gSprNSect.Init(); // collect sprites near outside walls
+#endif
+    
+    for (i = 0; i < numwalls; i++)
     {
-        sectortype *pSector = &sector[i];
-        baseFloor[i] = pSector->floorz;
-        baseCeil[i] = pSector->ceilingz;
+        setBasePoint(2, i);
+        if (wall[i].extra <= 0)
+            continue;
+
+        dassert(wall[i].extra < kMaxXWalls);
+        XWALL* pXWall = &xwall[wall[i].extra];
+        if (pXWall->state)
+            pXWall->busy = 65536;
+    }
+
+    for (i = 0; i < kMaxSprites; i++)
+    {
+        sprite[i].inittype = -1;
+        if (sprite[i].statnum >= kStatFree)
+            continue;
+
+        setBasePoint(1, i);
+        sprite[i].inittype = sprite[i].type;
+    }
+
+
+    for (i = 0; i < numsectors; i++)
+    {
+        pMark2 = NULL;
+        sectortype* pSector = &sector[i];
+        setBasePoint(3, i);
         int nXSector = pSector->extra;
         if (nXSector > 0)
         {
             dassert(nXSector < kMaxXSectors);
-            XSECTOR *pXSector = &xsector[nXSector];
+            XSECTOR* pXSector = &xsector[nXSector];
             if (pXSector->state)
                 pXSector->busy = 65536;
-            switch (pSector->type)
-            {
+            switch (pSector->type) {
             case kSectorCounter:
-                #ifdef NOONE_EXTENSIONS 
-                if (gModernMap)
-                    pXSector->triggerOff = false;
-                else
+                #ifdef NOONE_EXTENSIONS
+                    if (gModernMap) pXSector->triggerOff = false;
+                    else pXSector->triggerOnce = 1;
+                #else
+                    pXSector->triggerOnce = 1;
                 #endif
-                pXSector->triggerOnce = 1;
                 evPost(i, 6, 0, kCallbackCounterCheck);
-                break;
-            case kSectorZMotion:
-            case kSectorZMotionSprite:
-                ZTranslateSector(i, pXSector, pXSector->busy, 1);
                 break;
             case kSectorSlideMarked:
             case kSectorSlide:
-            {
-                spritetype *pSprite1 = &sprite[pXSector->marker0];
-                spritetype *pSprite2 = &sprite[pXSector->marker1];
-                TranslateSector(i, 0, -65536, pSprite1->x, pSprite1->y, pSprite1->x, pSprite1->y, pSprite1->ang, pSprite2->x, pSprite2->y, pSprite2->ang, pSector->type == kSectorSlide);
-                for (int j = 0; j < pSector->wallnum; j++)
-                {
-                    baseWall[pSector->wallptr+j].x = wall[pSector->wallptr+j].x;
-                    baseWall[pSector->wallptr+j].y = wall[pSector->wallptr+j].y;
-                }
-                for (int nSprite = headspritesect[i]; nSprite >= 0; nSprite = nextspritesect[nSprite])
-                {
-                    baseSprite[nSprite].x = sprite[nSprite].x;
-                    baseSprite[nSprite].y = sprite[nSprite].y;
-                    baseSprite[nSprite].z = sprite[nSprite].z;
-                }
-                TranslateSector(i, 0, pXSector->busy, pSprite1->x, pSprite1->y, pSprite1->x, pSprite1->y, pSprite1->ang, pSprite2->x, pSprite2->y, pSprite2->ang, pSector->type == kSectorSlide);
-                ZTranslateSector(i, pXSector, pXSector->busy, 1);
-                break;
-            }
+                // grab second marker
+                pMark2 = &sprite[pXSector->marker1];
+                fallthrough__;
             case kSectorRotateMarked:
             case kSectorRotate:
-            {
-                spritetype *pSprite1 = &sprite[pXSector->marker0];
-                TranslateSector(i, 0, -65536, pSprite1->x, pSprite1->y, pSprite1->x, pSprite1->y, 0, pSprite1->x, pSprite1->y, pSprite1->ang, pSector->type == kSectorRotate);
-                for (int j = 0; j < pSector->wallnum; j++)
+                // grab first marker
+                pMark1 = &sprite[pXSector->marker0];
+                if (pMark2) TranslateSector(i, 0, -65536, pMark1->x, pMark1->y, pMark1->x, pMark1->y, pMark1->ang, pMark2->x, pMark2->y, pMark2->ang, pSector->type == kSectorSlide);
+                else TranslateSector(i, 0, -65536, pMark1->x, pMark1->y, pMark1->x, pMark1->y, 0, pMark1->x, pMark1->y, pMark1->ang, pSector->type == kSectorRotate);
+                
+                #ifdef NOONE_EXTENSIONS
+                // must set basepoint for outside sprites as well
+                if (gModernMap && (ptr = gSprNSect.GetSprPtr(i)) != NULL)
                 {
-                    baseWall[pSector->wallptr+j].x = wall[pSector->wallptr+j].x;
-                    baseWall[pSector->wallptr+j].y = wall[pSector->wallptr+j].y;
+                    while (*ptr >= 0)
+                        setBasePoint(1, *ptr++);
                 }
-                for (int nSprite = headspritesect[i]; nSprite >= 0; nSprite = nextspritesect[nSprite])
-                {
-                    baseSprite[nSprite].x = sprite[nSprite].x;
-                    baseSprite[nSprite].y = sprite[nSprite].y;
-                    baseSprite[nSprite].z = sprite[nSprite].z;
-                }
-                TranslateSector(i, 0, pXSector->busy, pSprite1->x, pSprite1->y, pSprite1->x, pSprite1->y, 0, pSprite1->x, pSprite1->y, pSprite1->ang, pSector->type == kSectorRotate);
+                #endif
+
+                setBaseWallSect(i); setBaseSpriteSect(i);
+
+                if (pMark2) TranslateSector(i, 0, pXSector->busy, pMark1->x, pMark1->y, pMark1->x, pMark1->y, pMark1->ang, pMark2->x, pMark2->y, pMark2->ang, pSector->type == kSectorSlide);
+                else TranslateSector(i, 0, pXSector->busy, pMark1->x, pMark1->y, pMark1->x, pMark1->y, 0, pMark1->x, pMark1->y, pMark1->ang, pSector->type == kSectorRotate);
+                fallthrough__;
+            case kSectorZMotionSprite:
+            case kSectorZMotion:
                 ZTranslateSector(i, pXSector, pXSector->busy, 1);
                 break;
-            }
             case kSectorPath:
                 InitPath(i, pXSector);
                 break;
@@ -2119,9 +2272,9 @@ void trInit(void)
             case kModernRandom:
             case kModernRandom2:
                 if (!gModernMap || pXSprite->state == pXSprite->restState) break;
-                evPost(i, 3, (120 * pXSprite->busyTime) / 10, kCmdRepeat);
+                evPost(i, 3, (120 * pXSprite->busyTime) / 10, kCmdRepeat, i);
                 if (pXSprite->waitTime > 0)
-                    evPost(i, 3, (pXSprite->waitTime * 120) / 10, pXSprite->restState ? kCmdOn : kCmdOff);
+                    evPost(i, 3, (pXSprite->waitTime * 120) / 10, pXSprite->restState ? kCmdOn : kCmdOff, i);
                 break;
             case kModernSeqSpawner:
             case kModernObjDataAccumulator:
@@ -2129,9 +2282,9 @@ void trInit(void)
             case kModernEffectSpawner:
             case kModernWindGenerator:
                 if (pXSprite->state == pXSprite->restState) break;
-                evPost(i, 3, 0, kCmdRepeat);
+                evPost(i, 3, 0, kCmdRepeat, i);
                 if (pXSprite->waitTime > 0)
-                    evPost(i, 3, (pXSprite->waitTime * 120) / 10, pXSprite->restState ? kCmdOn : kCmdOff);
+                    evPost(i, 3, (pXSprite->waitTime * 120) / 10, pXSprite->restState ? kCmdOn : kCmdOff, i);
                 break;
             #endif
             case kGenTrigger:
@@ -2158,30 +2311,30 @@ void trInit(void)
         }
     }
     
-    evSend(0, 0, kChannelLevelStart, kCmdOn);
+    evSend(0, 0, kChannelLevelStart, kCmdOn, kCauserGame);
     #ifdef NOONE_EXTENSIONS
         if (gModernMap)
         {
             #ifdef TRIGGER_START_CHANNEL_NBLOOD
-                evSend(0, 0, TRIGGER_START_CHANNEL_NBLOOD, kCmdOn);
+                evSend(0, 0, TRIGGER_START_CHANNEL_NBLOOD, kCmdOn, kCauserGame);
             #endif
 
             #ifdef TRIGGER_START_CHANNEL_RAZE
-                 evSend(0, 0, TRIGGER_START_CHANNEL_RAZE, kCmdOn);
+                 evSend(0, 0, TRIGGER_START_CHANNEL_RAZE, kCmdOn, kCauserGame);
             #endif
         }
     #endif
 
     switch (gGameOptions.nGameType) {
         case 1:
-            evSend(0, 0, kChannelLevelStartCoop, kCmdOn);
+            evSend(0, 0, kChannelLevelStartCoop, kCmdOn, kCauserGame);
             break;
         case 2:
-            evSend(0, 0, kChannelLevelStartMatch, kCmdOn);
+            evSend(0, 0, kChannelLevelStartMatch, kCmdOn, kCauserGame);
             break;
         case 3:
-            evSend(0, 0, kChannelLevelStartMatch, kCmdOn);
-            evSend(0, 0, kChannelLevelStartTeamsOnly, kCmdOn);
+            evSend(0, 0, kChannelLevelStartMatch, kCmdOn, kCauserGame);
+            evSend(0, 0, kChannelLevelStartTeamsOnly, kCmdOn, kCauserGame);
             break;
     }
 }
@@ -2208,7 +2361,7 @@ void InitGenerator(int nSprite)
             break;
     }
     if (pXSprite->state != pXSprite->restState && pXSprite->busyTime > 0)
-        evPost(nSprite, 3, (120*(pXSprite->busyTime+Random2(pXSprite->data1)))/10, kCmdRepeat);
+        evPost(nSprite, 3, (120*(pXSprite->busyTime+Random2(pXSprite->data1)))/10, kCmdRepeat, nSprite);
 }
 
 void ActivateGenerator(int nSprite)
@@ -2278,7 +2431,7 @@ void MGunFireSeqCallback(int, int nXSprite)
         {
             pXSprite->data2--;
             if (pXSprite->data2 == 0)
-                evPost(nSprite, 3, 1, kCmdOff);
+                evPost(nSprite, 3, 1, kCmdOff, nSprite);
         }
         int dx = (Cos(pSprite->ang)>>16)+Random2(1000);
         int dy = (Sin(pSprite->ang)>>16)+Random2(1000);

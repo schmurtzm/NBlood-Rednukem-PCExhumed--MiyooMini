@@ -382,7 +382,7 @@ void CounterCheck(int nSector) // 12
         return;
     } else {
         //pXSector->waitTimeA = 0; //do not reset necessary objects counter to zero
-        trTriggerSector(nSector, pXSector, kCmdOn);
+        trTriggerSector(nSector, pXSector, kCmdOn, kCauserGame);
         pXSector->locked = 1; //lock sector, so it can be opened again later
     }
 }
@@ -510,13 +510,13 @@ void returnFlagToBase(int nSprite) // 17
         XSPRITE* pXOwner = &xsprite[pOwner->extra];
         switch (pSprite->type) {
             case kItemFlagA:
-                trTriggerSprite(pOwner->index, pXOwner, kCmdOn);
+                trTriggerSprite(pOwner->index, pXOwner, kCmdOn, pOwner->index);
                 sndStartSample(8003, 255, 2, 0);
                 gBlueFlagDropped = false;
                 viewSetMessage("Blue Flag returned to base.");
                 break;
             case kItemFlagB:
-                trTriggerSprite(pOwner->index, pXOwner, kCmdOn);
+                trTriggerSprite(pOwner->index, pXOwner, kCmdOn, pOwner->index);
                 sndStartSample(8002, 255, 2, 0);
                 gRedFlagDropped = false;
                 viewSetMessage("Red Flag returned to base.");
@@ -666,9 +666,9 @@ void DropVoodoo(int nSprite) // unused
                 {
                     if (pPlayer2)
                     {
-                        if (gGameOptions.nGameType == 1)
+                        if (gGameOptions.nGameType == kGameTypeCoop)
                             continue;
-                        if (gGameOptions.nGameType == 3 && pPlayer->teamId == pPlayer2->teamId)
+                        if (gGameOptions.nGameType == kGameTypeTeams && pPlayer->teamId == pPlayer2->teamId)
                             continue;
                         int t = 0x8000/ClipLow(gNetPlayers-1, 1);
                         if (!powerupCheck(pPlayer2, kPwUpDeathMask))

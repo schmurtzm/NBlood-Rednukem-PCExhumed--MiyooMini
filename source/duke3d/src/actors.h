@@ -388,6 +388,8 @@ enum pflags_t : unsigned int
     PROJECTILE_ACCURATE          = 0x00100000,
     PROJECTILE_NOSETOWNERSHADE   = 0x00200000,
     PROJECTILE_RPG_IMPACT_DAMAGE = 0x00400000,
+//    PROJECTILE_PENETRATE         = 0x00800000,
+    PROJECTILE_HITRADIUS_ADDITIVE  = 0x01000000,
     PROJECTILE_MOVED             = 0x80000000,  // internal flag, do not document
     PROJECTILE_TYPE_MASK         = PROJECTILE_HITSCAN | PROJECTILE_RPG | PROJECTILE_KNEE | PROJECTILE_BLOOD,
 };
@@ -426,6 +428,8 @@ int  G_SetInterpolation(int32_t *posptr);
 void G_DeleteAllLights(void);
 void G_AddGameLight(int spriteNum, int sectNum, vec3_t const &offset, int lightRange, int lightRadius, int lightHoriz, uint32_t lightColor, int lightPrio);
 void G_InterpolateLights(int smoothratio);
+void G_DoConveyorInterp(int smoothratio);
+void G_ResetConveyorInterp(void);
 void G_ClearCameraView(DukePlayer_t *ps);
 void G_DoInterpolations(int smoothRatio);
 void G_MoveWorld(void);

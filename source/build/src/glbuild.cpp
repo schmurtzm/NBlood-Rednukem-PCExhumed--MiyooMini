@@ -45,11 +45,10 @@ void buildgl_outputDebugMessage(uint8_t severity, const char* format, ...)
         va_list va;
         buf = (char *)Xrealloc(buf, (size <<= 1));
         va_start(va, format);
-        len = Bvsnprintf(buf, size-1, format, va);
+        len = Bvsnprintf(buf, size, format, va);
         va_end(va);
-    } while ((unsigned)len > size-1);
+    } while ((unsigned)len >= size);
 
-    buf[len] = 0;
     glDebugMessageInsertARB(GL_DEBUG_SOURCE_APPLICATION_ARB,
                             GL_DEBUG_TYPE_OTHER_ARB,
                             0,
@@ -69,6 +68,7 @@ void buildgl_resetStateAccounting()
 
     for (auto i=GL_TEXTURE0;i<MAXTEXUNIT;i++)
     {
+        buildgl_bindSamplerObject(TEXUNIT_INDEX_FROM_NAME(i), 0);
         gl.currentBoundSampler[TEXUNIT_INDEX_FROM_NAME(i)] = (glsamplertype)-1;
         gl.state[TEXUNIT_INDEX_FROM_NAME(i)].count = 64;
         inthash_init(&gl.state[TEXUNIT_INDEX_FROM_NAME(i)]);

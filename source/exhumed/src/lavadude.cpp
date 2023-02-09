@@ -98,8 +98,8 @@ int BuildLavaLimb(int nSprite, int edx, int ebx)
 //	GrabTimeSlot(3);
 
     sprite[nLimbSprite].extra = -1;
-    sprite[nLimbSprite].owner = runlist_AddRunRec(sprite[nLimbSprite].lotag - 1, nLimbSprite | 0x160000);
-    sprite[nLimbSprite].hitag = runlist_AddRunRec(NewRun, nLimbSprite | 0x160000);
+    sprite[nLimbSprite].owner = runlist_AddRunRec(sprite[nLimbSprite].lotag - 1, nLimbSprite, kRunLavaLimb);
+    sprite[nLimbSprite].hitag = runlist_AddRunRec(NewRun, nLimbSprite, kRunLavaLimb);
 
     return nLimbSprite;
 }
@@ -200,12 +200,12 @@ int BuildLava(short nSprite, int x, int y, int UNUSED(z), short nSector, short n
     LavaList[nLava].nChannel = nChannel;
     LavaList[nLava].nFrame = 0;
 
-    sprite[nSprite].owner = runlist_AddRunRec(sprite[nSprite].lotag - 1, nLava | 0x150000);
-    LavaList[nLava].nRun = runlist_AddRunRec(NewRun, nLava | 0x150000);
+    sprite[nSprite].owner = runlist_AddRunRec(sprite[nSprite].lotag - 1, nLava, kRunLavaDude);
+    LavaList[nLava].nRun = runlist_AddRunRec(NewRun, nLava, kRunLavaDude);
 
     nCreaturesLeft++;
 
-    return nLava | 0x150000;
+    return nLava;
 }
 
 void FuncLava(int a, int nDamage, int nRun)
@@ -451,34 +451,26 @@ void FuncLava(int a, int nDamage, int nRun)
                 {
                     if (nFlag & 0x40)
                     {
-                        int nLimbSprite = BuildLavaLimb(nSprite, LavaList[nLava].nFrame, 64000);
-                        D3PlayFX(StaticSound[kSoundSetLand], nLimbSprite);
+                       int nLimbSprite = BuildLavaLimb(nSprite, LavaList[nLava].nFrame, 64000);
+                       D3PlayFX(StaticSound[kSoundSetLand], nLimbSprite);
                     }
 
                     if (LavaList[nLava].nFrame)
                     {
                         if (nFlag & 0x80)
                         {
-                            int ecx = 0;
-                            do
-                            {
-                                BuildLavaLimb(nSprite, ecx, 64000);
-                                ecx++;
+                            for (int i = 0; i < 20; i++) {
+                                BuildLavaLimb(nSprite, i, 64000);
                             }
-                            while (ecx < 20);
+
                             runlist_ChangeChannel(LavaList[nLava].nChannel, 1);
                         }
                     }
                     else
                     {
-                        int ecx = 0;
-
-                        do
-                        {
-                            BuildLavaLimb(nSprite, ecx, 256);
-                            ecx++;
+                        for (int i = 0; i < 30; i++) {
+                            BuildLavaLimb(nSprite, i, 256);
                         }
-                        while (ecx < 30);
 
                         runlist_DoSubRunRec(sprite[nSprite].owner);
                         runlist_FreeRun(sprite[nSprite].lotag - 1);

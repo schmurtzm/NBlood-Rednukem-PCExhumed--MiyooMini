@@ -610,7 +610,7 @@ void FuncElev(int a, int UNUSED(b), int nRun)
                 {
                     if (Elevator[nElev].field_32 < 0)
                     {
-                        Elevator[nElev].field_32 = runlist_AddRunRec(NewRun, RunData[nRun].nMoves);
+                        Elevator[nElev].field_32 = runlist_AddRunRec(NewRun, RunData[nRun].nVal, RunData[nRun].nRef);
                         StartElevSound(Elevator[nElev].nSprite, var_18);
 
                         edi = 1;
@@ -642,7 +642,7 @@ void FuncElev(int a, int UNUSED(b), int nRun)
             {
                 if (Elevator[nElev].field_32 < 0)
                 {
-                    Elevator[nElev].field_32 = runlist_AddRunRec(NewRun, RunData[nRun].nMoves);
+                    Elevator[nElev].field_32 = runlist_AddRunRec(NewRun, RunData[nRun].nVal, RunData[nRun].nRef);
 
                     StartElevSound(Elevator[nElev].nSprite, var_18);
                 }
@@ -813,7 +813,7 @@ int BuildWallFace(short nChannel, short nWall, short nCount, ...)
     }
     va_end(piclist);
 
-    return nWallFace | 0x70000;
+    return nWallFace;
 }
 
 void FuncWallFace(int a, int UNUSED(b), int nRun)
@@ -966,7 +966,7 @@ int BuildSlide(int nChannel, int nStartWall, int ebx, int ecx, int nWall2, int n
 
     SlideData2[nSlide].field_8 = 0;
 
-    return nSlide | 0x80000;
+    return nSlide;
 }
 
 void FuncSlide(int a, int UNUSED(b), int nRun)
@@ -996,7 +996,7 @@ void FuncSlide(int a, int UNUSED(b), int nRun)
                 return;
             }
 
-            SlideData2[nSlide].field_4 = runlist_AddRunRec(NewRun, RunData[nRun].nMoves);
+            SlideData2[nSlide].field_4 = runlist_AddRunRec(NewRun, RunData[nRun].nVal, RunData[nRun].nRef);
 
             if (SlideData2[nSlide].field_8 != sRunChannels[nChannel].c)
             {
@@ -1161,8 +1161,8 @@ int BuildTrap(int nSprite, int edx, int ebx, int ecx)
     sprite[nSprite].extra = -1;
 
     sprite[nSprite].lotag = runlist_HeadRun() + 1;
-    sprite[nSprite].hitag = runlist_AddRunRec(NewRun, nTrap | 0x1F0000);
-    sprite[nSprite].owner = runlist_AddRunRec(sprite[nSprite].lotag - 1, nTrap | 0x1F0000);
+    sprite[nSprite].hitag = runlist_AddRunRec(NewRun, nTrap, kRunTrap);
+    sprite[nSprite].owner = runlist_AddRunRec(sprite[nSprite].lotag - 1, nTrap, kRunTrap);
 
 //	GrabTimeSlot(3);
 
@@ -1179,7 +1179,7 @@ int BuildTrap(int nSprite, int edx, int ebx, int ecx)
     sTrap[nTrap].field_A = 0;
 
     if (var_18 == -1) {
-        return nTrap | 0x1F0000;
+        return nTrap;
     }
 
     sTrap[nTrap].field_6 = -1;
@@ -1193,7 +1193,7 @@ int BuildTrap(int nSprite, int edx, int ebx, int ecx)
     while (1)
     {
         if (sector[nSector].wallnum >= i) {
-            return nTrap | 0x1F0000;
+            return nTrap;
         }
 
         if (var_18 == wall[nWall].hitag)
@@ -1202,7 +1202,7 @@ int BuildTrap(int nSprite, int edx, int ebx, int ecx)
             {
                 sTrap[nTrap].field_8 = nWall;
                 sTrap[nTrap].field_C = wall[nWall].picnum;
-                return nTrap | 0x1F0000;
+                return nTrap;
             }
             else
             {
@@ -1281,7 +1281,7 @@ void FuncTrap(int a, int UNUSED(b), int nRun)
                     int nBullet = BuildBullet(nSprite, nType, 0, 0, 0, sprite[nSprite].ang, 0, 1);
                     if (nBullet > -1)
                     {
-                        short nBulletSprite = nBullet & 0xFFFF; // isolate the sprite index (disregard top 16 bits)
+                        int nBulletSprite = GetBulletSprite(nBullet);
                         assert(nBulletSprite >= 0);
 
                         if (nType == 15)
@@ -1338,38 +1338,38 @@ int BuildFireBall(int nSprite, int a, int b)
 
 int BuildSpark(int nSprite, int nVal)
 {
-    int var_14 = insertsprite(sprite[nSprite].sectnum, 0);
+    int nSparkSprite = insertsprite(sprite[nSprite].sectnum, 0);
 
-    if (var_14 < 0) {
+    if (nSparkSprite < 0) {
         return -1;
     }
 
-    assert(var_14 < kMaxSprites);
+    assert(nSparkSprite < kMaxSprites);
 
-    sprite[var_14].x = sprite[nSprite].x;
-    sprite[var_14].y = sprite[nSprite].y;
-    sprite[var_14].cstat = 0;
-    sprite[var_14].shade = -127;
-    sprite[var_14].pal = 1;
-    sprite[var_14].xoffset = 0;
-    sprite[var_14].yoffset = 0;
-    sprite[var_14].xrepeat = 50;
-    sprite[var_14].yrepeat = 50;
+    sprite[nSparkSprite].x = sprite[nSprite].x;
+    sprite[nSparkSprite].y = sprite[nSprite].y;
+    sprite[nSparkSprite].cstat = 0;
+    sprite[nSparkSprite].shade = -127;
+    sprite[nSparkSprite].pal = 1;
+    sprite[nSparkSprite].xoffset = 0;
+    sprite[nSparkSprite].yoffset = 0;
+    sprite[nSparkSprite].xrepeat = 50;
+    sprite[nSparkSprite].yrepeat = 50;
 
     if (nVal >= 2)
     {
-        sprite[var_14].picnum = kEnergy2;
+        sprite[nSparkSprite].picnum = kEnergy2;
         nSmokeSparks++;
 
         if (nVal == 3)
         {
-            sprite[var_14].xrepeat = 120;
-            sprite[var_14].yrepeat = 120;
+            sprite[nSparkSprite].xrepeat = 120;
+            sprite[nSparkSprite].yrepeat = 120;
         }
         else
         {
-            sprite[var_14].xrepeat = sprite[nSprite].xrepeat + 15;
-            sprite[var_14].yrepeat = sprite[nSprite].xrepeat + 15;
+            sprite[nSparkSprite].xrepeat = sprite[nSprite].xrepeat + 15;
+            sprite[nSparkSprite].yrepeat = sprite[nSprite].xrepeat + 15;
         }
     }
     else
@@ -1378,31 +1378,31 @@ int BuildSpark(int nSprite, int nVal)
 
         if (nVal)
         {
-            sprite[var_14].xvel = Cos(nAngle) >> 5;
-            sprite[var_14].yvel = Sin(nAngle) >> 5;
+            sprite[nSparkSprite].xvel = Cos(nAngle) >> 5;
+            sprite[nSparkSprite].yvel = Sin(nAngle) >> 5;
         }
         else
         {
-            sprite[var_14].xvel = Cos(nAngle) >> 6;
-            sprite[var_14].yvel = Sin(nAngle) >> 6;
+            sprite[nSparkSprite].xvel = Cos(nAngle) >> 6;
+            sprite[nSparkSprite].yvel = Sin(nAngle) >> 6;
         }
 
-        sprite[var_14].zvel = -(RandomSize(4) << 7);
-        sprite[var_14].picnum = kTile985 + nVal;
+        sprite[nSparkSprite].zvel = -(RandomSize(4) << 7);
+        sprite[nSparkSprite].picnum = kTile985 + nVal;
     }
 
-    sprite[var_14].z = sprite[nSprite].z;
-    sprite[var_14].lotag = runlist_HeadRun() + 1;
-    sprite[var_14].clipdist = 1;
-    sprite[var_14].hitag = 0;
+    sprite[nSparkSprite].z = sprite[nSprite].z;
+    sprite[nSparkSprite].lotag = runlist_HeadRun() + 1;
+    sprite[nSparkSprite].clipdist = 1;
+    sprite[nSparkSprite].hitag = 0;
 
 //	GrabTimeSlot(3);
 
-    sprite[var_14].extra = -1;
-    sprite[var_14].owner = runlist_AddRunRec(sprite[var_14].lotag - 1, var_14 | 0x260000);
-    sprite[var_14].hitag = runlist_AddRunRec(NewRun, var_14 | 0x260000);
+    sprite[nSparkSprite].extra = -1;
+    sprite[nSparkSprite].owner = runlist_AddRunRec(sprite[nSparkSprite].lotag - 1, nSparkSprite, kRunSpark);
+    sprite[nSparkSprite].hitag = runlist_AddRunRec(NewRun, nSparkSprite, kRunSpark);
 
-    return var_14;
+    return nSparkSprite;
 }
 
 void FuncSpark(int a, int UNUSED(b), int nRun)
@@ -1601,11 +1601,11 @@ int BuildEnergyBlock(short nSector)
     sprite[nSprite].extra = -1;
     sprite[nSprite].lotag = runlist_HeadRun() + 1;
     sprite[nSprite].hitag = 0;
-    sprite[nSprite].owner = runlist_AddRunRec(sprite[nSprite].lotag - 1, nSprite | 0x250000);
+    sprite[nSprite].owner = runlist_AddRunRec(sprite[nSprite].lotag - 1, nSprite, kRunEnergyBlock);
 
     nEnergyBlocks++;
 
-    return nSprite | 0x250000;
+    return nSprite | 0x250000; // TODO: FIXME
 }
 
 // TODO - tidy
@@ -1829,7 +1829,7 @@ int BuildObject(short nSprite, int nOjectType, int nHitag)
     sprite[nSprite].extra = -1;
     sprite[nSprite].lotag = runlist_HeadRun() + 1;
     sprite[nSprite].hitag = 0;
-    sprite[nSprite].owner = runlist_AddRunRec(sprite[nSprite].lotag - 1, nObject | 0x170000);
+    sprite[nSprite].owner = runlist_AddRunRec(sprite[nSprite].lotag - 1, nObject, kRunObject);
 
 //	GrabTimeSlot(3);
 
@@ -1841,7 +1841,7 @@ int BuildObject(short nSprite, int nOjectType, int nHitag)
     }
 
     ObjectList[nObject].nSprite = nSprite;
-    ObjectList[nObject].field_4 = runlist_AddRunRec(NewRun, nObject | 0x170000);
+    ObjectList[nObject].field_4 = runlist_AddRunRec(NewRun, nObject, kRunObject);
 
     short nSeq = ObjectSeq[nOjectType];
 
@@ -1875,7 +1875,7 @@ int BuildObject(short nSprite, int nOjectType, int nHitag)
         }
     }
 
-    return nObject | 0x170000;
+    return nObject;
 }
 
 // in-game destructable wall mounted screen

@@ -633,7 +633,7 @@ EXTERN wallext_t wallext[MAXWALLS];
 EXTERN sectortype sector[MAXSECTORS + M32_FIXME_SECTORS];
 EXTERN walltype wall[MAXWALLS + M32_FIXME_WALLS];
 EXTERN spritetype sprite[MAXSPRITES];
-EXTERN uspritetype tsprite[MAXSPRITESONSCREEN];
+EXTERN tspritetype tsprite[MAXSPRITESONSCREEN];
 #endif
 
 #ifdef USE_STRUCT_TRACKERS
@@ -983,7 +983,9 @@ typedef struct { int16_t newtile; int16_t owner; } rottile_t;
 EXTERN rottile_t rottile[MAXTILES];
 EXTERN intptr_t waloff[MAXTILES];  // stores pointers to cache  -- SA
 
-EXTERN int32_t windowx, windowy;
+EXTERN vec2_t g_windowPos;
+EXTERN bool g_windowPosValid;
+
 
     //These variables are for auto-mapping with the draw2dscreen function.
     //When you load a new board, these bits are all set to 0 - since
@@ -1000,6 +1002,15 @@ EXTERN int automapping;
 EXTERN char show2dsector[(MAXSECTORS+7)>>3];
 EXTERN char show2dwall[(MAXWALLS+7)>>3];
 EXTERN char show2dsprite[(MAXSPRITES+7)>>3];
+
+struct classicht_t
+{
+    intptr_t ptr;
+    vec2_16_t upscale;
+    char lock;
+};
+
+EXTERN classicht_t classicht[MAXTILES];
 
 // In the editor, gotpic is only referenced from inline assembly;
 // the compiler needs that hint or building with LTO will discard it.
@@ -1048,8 +1059,10 @@ enum
     VF_NOTRANS = 1,
 };
 
+extern int32_t usehightile;
+
 #ifdef USE_OPENGL
-extern int32_t usemodels, usehightile;
+extern int32_t usemodels;
 extern int32_t rendmode;
 #endif
 extern uint8_t globalr, globalg, globalb;
@@ -1243,6 +1256,7 @@ void    artClearMapArt(void);
 void    artSetupMapArt(const char *filename);
 bool    tileLoad(int16_t tilenume);
 void    tileLoadData(int16_t tilenume, int32_t dasiz, char *buffer);
+intptr_t tileLoadScaled(int const picnum, vec2_16_t* upscale = nullptr);
 int32_t tileGetCRC32(int16_t tileNum);
 vec2_16_t tileGetSize(int16_t tileNum);
 void    artConvertRGB(palette_t *pic, uint8_t const *buf, int32_t bufsizx, int32_t sizx, int32_t sizy);
@@ -1346,7 +1360,7 @@ void   neartag(int32_t xs, int32_t ys, int32_t zs, int16_t sectnum, int16_t ange
                int32_t *neartaghitdist, int32_t neartagrange, uint8_t tagsearch,
                int32_t (*blacklist_sprite_func)(int32_t)) ATTRIBUTE((nonnull(6,7,8)));
 int32_t   cansee(int32_t x1, int32_t y1, int32_t z1, int16_t sect1,
-                 int32_t x2, int32_t y2, int32_t z2, int16_t sect2);
+                 int32_t x2, int32_t y2, int32_t z2, int16_t sect2, int32_t wallmask = CSTAT_WALL_1WAY);
 int32_t   inside(int32_t x, int32_t y, int16_t sectnum);
 void   calc_sector_reachability(void);
 int    sectorsareconnected(int const, int const);
@@ -1523,7 +1537,7 @@ int32_t wallvisible(int32_t const x, int32_t const y, int16_t const wallnum);
 
 //void   qsetmode640350(void);
 //void   qsetmode640480(void);
-void videoSet2dMode(int32_t daupscaledxdim, int32_t daupscaledydim, int32_t daupscalefactor = 1);
+void videoSet2dMode(char davidoption, int32_t daupscaledxdim, int32_t daupscaledydim, int32_t daupscalefactor = 1);
 void   clear2dscreen(void);
 void   editorDraw2dGrid(int32_t posxe, int32_t posye, int32_t posze, int16_t cursectnum,
                   int16_t ange, int32_t zoome, int16_t gride);

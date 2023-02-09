@@ -14,7 +14,14 @@
 #include "renderlayer.h"
 #include "sdl_inc.h"
 #include "softsurface.h"
-#include "keyboard.h"
+
+#if SDL_MAJOR_VERSION >= 2
+# include "imgui.h"
+# include "imgui_impl_sdl.h"
+#ifdef USE_OPENGL
+# include "imgui_impl_opengl3.h"
+#endif
+#endif
 
 #ifdef USE_OPENGL
 # include "glad/glad.h"
@@ -66,8 +73,6 @@ bool startwin_isopen(void) { return false; }
 //#define SDL_WM_GrabInput(x) SDL_WM_GrabInput(SDL_GRAB_OFF)
 //#define SDL_ShowCursor(x) SDL_ShowCursor(SDL_ENABLE)
 
-#define SURFACE_FLAGS	(SDL_SWSURFACE|SDL_HWPALETTE|SDL_HWACCEL)
-
 // undefine to restrict windowed resolutions to conventional sizes
 #define ANY_WINDOWED_SIZE
 
@@ -79,13 +84,17 @@ char quitevent=0, appactive=1, novideo=0;
 // video
 static SDL_Surface *sdl_surface/*=NULL*/;
 
+static vec2_t sdl_resize;
+static int sdl_minimized;
+
 #if SDL_MAJOR_VERSION >= 2
 static SDL_Window *sdl_window;
 static SDL_GLContext sdl_context;
-static vec2_t sdl_resize;
-static int sdl_minimized;
+static int vsync_unsupported;
 #endif
 
+static int32_t vsync_renderlayer;
+int32_t maxrefreshfreq=0;
 int32_t xres=-1, yres=-1, bpp=0, fullscreen=0, bytesperline;
 double refreshfreq = 60.0;
 intptr_t frameplace=0;
@@ -101,9 +110,6 @@ static uint16_t sysgamma[3][256];
 // OpenGL stuff
 char nogl=0;
 #endif
-static int32_t vsync_renderlayer;
-static int vsync_unsupported;
-int32_t maxrefreshfreq=0;
 // last gamma, contrast, brightness
 static float lastvidgcb[3];
 
@@ -117,7 +123,11 @@ static SDL_Surface *loadappicon(void);
 #endif
 
 static mutex_t m_initprintf;
-
+#if SDL_MAJOR_VERSION >= 2
+static ImGuiIO *g_ImGui_IO;
+bool g_ImGuiCaptureInput = true;
+#endif
+uint8_t g_ImGuiCapturedDevices;
 #ifdef _WIN32
 # if SDL_MAJOR_VERSION >= 2
 //
@@ -477,7 +487,7 @@ int main(int argc, char *argv[])
 #endif
 
     engineSetupLogging(argc, argv);
-    
+
 #if SDL_VERSION_ATLEAST(2, 0, 8)
     if (EDUKE32_SDL_LINKED_PREREQ(linked, 2, 0, 8))
         SDL_SetMemoryFunctions(_xmalloc, _xcalloc, _xrealloc, _xfree);
@@ -674,7 +684,7 @@ int32_t sdlayer_checkversion(void)
                 linked.major, linked.minor, linked.patch, compiled.major, compiled.minor, compiled.patch);
     }
 
-    LOG_F(INFO, str);
+    LOG_F(INFO, "%s", str);
 
     if (SDL_VERSIONNUM(linked.major, linked.minor, linked.patch) < SDL2_REQUIREDVERSION)
     {
@@ -919,7 +929,7 @@ void joyScanDevices()
             else
 #endif
                 Bstrncpyz(name, SDL_JoystickNameForIndex(i), sizeof(name));
-                
+
             VLOG_F(LOG_INPUT, "  %d. %s", i + 1, name);
         }
 #if SDL_MAJOR_VERSION >= 2
@@ -1242,7 +1252,7 @@ void mouseUninit(void)
 static void SetWindowGrab(SDL_Window *pWindow, int const clipToWindow)
 {
     UNREFERENCED_PARAMETER(pWindow);
-    RECT rect { windowx, windowy, windowx + xdim, windowy + ydim };
+    RECT rect { g_windowPos.x, g_windowPos.y, g_windowPos.x + xdim, g_windowPos.y + ydim };
     ClipCursor(clipToWindow ? &rect : nullptr);
 }
 #define SDL_SetWindowGrab SetWindowGrab
@@ -1285,13 +1295,28 @@ void mouseGrabInput(bool grab)
 
 void mouseLockToWindow(char a)
 {
+#if SDL_MAJOR_VERSION >= 2
+    if (!g_ImGui_IO || !g_ImGui_IO->WantCaptureMouse)
+#endif
     if (!(a & 2))
     {
         mouseGrabInput(a);
         g_mouseLockedToWindow = g_mouseGrabbed;
     }
 
-    SDL_ShowCursor((osd && osd->flags & OSD_CAPTURE) ? SDL_ENABLE : SDL_DISABLE);
+    int newstate = (osd && ((osd->flags & OSD_CAPTURE) || (g_ImGuiCapturedDevices & DEV_MOUSE))) ? SDL_ENABLE : SDL_DISABLE;
+
+    SDL_ShowCursor(newstate);
+
+#if SDL_MAJOR_VERSION >= 2
+    if (g_ImGui_IO)
+    {
+        if (newstate)
+            g_ImGui_IO->ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
+        else
+            g_ImGui_IO->ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+    }
+#endif
 }
 
 void mouseMoveToCenter(void)
@@ -1348,9 +1373,15 @@ void videoGetModes(int display)
 
     if (modeschecked || novideo)
         return;
+    else
+    {
+        auto name = Xstrdup(videoGetDisplayName(display)), shortened = strtok(name, "(");
+        if (!shortened) shortened = name;
+        VLOG_F(LOG_GFX, "Detecting video modes for display %d (%s)...", display, shortened);
+        DO_FREE_AND_NULL(name);
+    }
 
     validmodecnt = 0;
-    VLOG_F(LOG_GFX, "Detecting video modes...");
 
     // do fullscreen modes first
     for (i = 0; i < SDL_GetNumDisplayModes(display); i++)
@@ -1467,6 +1498,7 @@ char const *videoGetDisplayName(int display)
 #if SDL_MAJOR_VERSION >= 2
     return SDL_GetDisplayName(display);
 #else
+    UNREFERENCED_PARAMETER(display);
     return "Primary display";
 #endif
 }
@@ -1487,6 +1519,66 @@ static void destroy_window_resources()
     if (sdl_window)
         SDL_DestroyWindow(sdl_window);
     sdl_window = NULL;
+#endif
+}
+
+bool g_ImGuiFrameActive;
+
+void engineBeginImGuiFrame(void)
+{
+    Bassert(g_ImGuiFrameActive == false);
+#if SDL_MAJOR_VERSION >= 2
+#ifdef USE_OPENGL
+    ImGui_ImplOpenGL3_NewFrame();
+#endif
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+    g_ImGuiFrameActive = true;
+#endif
+}
+
+void engineEndImGuiInput(void)
+{
+    keyFlushChars();
+    keyFlushScans();
+#if SDL_MAJOR_VERSION >= 2
+    ImGui::GetIO().ClearInputKeys();
+//    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+    SDL_StopTextInput();
+#endif
+}
+
+void engineBeginImGuiInput(void)
+{
+    keyFlushChars();
+    keyFlushScans();
+#if SDL_MAJOR_VERSION >= 2
+    SDL_StartTextInput();
+//    ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
+#endif
+}
+
+void engineSetupImGui(void)
+{
+#if SDL_MAJOR_VERSION >= 2
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    g_ImGui_IO = &ImGui::GetIO();
+    g_ImGui_IO->IniFilename = nullptr;
+    g_ImGui_IO->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    g_ImGui_IO->ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+    g_ImGui_IO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+#ifdef USE_OPENGL
+    ImGui_ImplSDL2_InitForOpenGL(sdl_window, sdl_context);
+    ImGui_ImplOpenGL3_Init();
+#endif
+
+    g_ImGui_IO->Fonts->AddFontDefault();
+    //ImFont* font = g_ImGui_IO->Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\consola.ttf", 12.0f);
+    //IM_ASSERT(font != NULL);
 #endif
 }
 
@@ -1561,7 +1653,7 @@ int32_t setvideomode_sdlcommon(int32_t *x, int32_t *y, int32_t c, int32_t fs, in
     return 1;
 }
 
-void setvideomode_sdlcommonpost(int32_t x, int32_t y, int32_t c, int32_t fs, int32_t regrab)
+int setvideomode_sdlcommonpost(int32_t x, int32_t y, int32_t c, int32_t fs, int32_t regrab)
 {
     wm_setapptitle(apptitle);
 
@@ -1603,51 +1695,79 @@ void setvideomode_sdlcommonpost(int32_t x, int32_t y, int32_t c, int32_t fs, int
     int const displayindex = SDL_GetWindowDisplayIndex(sdl_window);
     int const newdisplayindex = r_displayindex < SDL_GetNumVideoDisplays() ? r_displayindex : displayindex;
 
-    if (displayindex != newdisplayindex)
-        windowx = windowy = -1;
-
     SDL_DisplayMode desktopmode;
-    SDL_GetDesktopDisplayMode(newdisplayindex, &desktopmode);
+    if (SDL_GetDesktopDisplayMode(newdisplayindex, &desktopmode))
+    {
+        LOG_F(ERROR, "Unable to query desktop display mode: %s.", SDL_GetError());
+        return -1;
+    }
 
-    refreshfreq = desktopmode.refresh_rate;
+    if (displayindex != newdisplayindex || g_windowPos.x + x < 0 || g_windowPos.y + y < 0 || g_windowPos.x > desktopmode.w || g_windowPos.y > desktopmode.h)
+        g_windowPosValid = false;
+
+#ifdef _WIN32
+    if (timingInfo.rateRefresh.uiNumerator && timingInfo.rateRefresh.uiDenominator)
+        refreshfreq = (double)timingInfo.rateRefresh.uiNumerator / timingInfo.rateRefresh.uiDenominator;
+    else
+#endif
+        refreshfreq = desktopmode.refresh_rate;
 
     int const matchedResolution = (desktopmode.w == x && desktopmode.h == y);
     int const borderless = (r_borderless == 1 || (r_borderless == 2 && matchedResolution)) ? SDL_WINDOW_BORDERLESS : 0;
 
     if (fs)
     {
-        SDL_DisplayMode dispmode;
+        SDL_DisplayMode dispmode = { 0, x, y, maxrefreshfreq, nullptr }, newmode;
 
-        dispmode.w            = x;
-        dispmode.h            = y;
-        dispmode.refresh_rate = maxrefreshfreq;
-
-        SDL_DisplayMode newmode;
-        SDL_GetClosestDisplayMode(newdisplayindex, &dispmode, &newmode);
-        SDL_SetWindowDisplayMode(sdl_window, &newmode);
-#ifdef _WIN32
-        if (timingInfo.rateRefresh.uiNumerator)
-            refreshfreq = (double)timingInfo.rateRefresh.uiNumerator / timingInfo.rateRefresh.uiDenominator;
+        if (SDL_GetClosestDisplayMode(newdisplayindex, &dispmode, &newmode) == nullptr)
+        {
+            LOG_F(ERROR, "Unable to find a fullscreen video mode suitable for or similar to %dx%d at %dHz: %s.", x, y, maxrefreshfreq, SDL_GetError());
+            return -1;
+        }
         else
-#endif
-            refreshfreq = newmode.refresh_rate;
+        {
+            if (SDL_SetWindowDisplayMode(sdl_window, &newmode))
+            {
+                LOG_F(ERROR, "Unable to set video mode: %s.", SDL_GetError());
+                return -1;
+            }
+            else
+                refreshfreq = newmode.refresh_rate;
+        }
     }
 
-    VLOG_F(LOG_GFX, "Refresh rate: %.2fHz.", refreshfreq);
+    static double lastrefreshfreq;
+
+    if (refreshfreq != lastrefreshfreq)
+    {
+        VLOG_F(LOG_GFX, "Refresh rate: %.2fHz.", refreshfreq);
+        lastrefreshfreq = refreshfreq;
+    }
 
     SDL_SetWindowSize(sdl_window, x, y);
 
     if (fs)
     {
-        SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN);
-        SDL_SetWindowPosition(sdl_window, (int)SDL_WINDOWPOS_UNDEFINED_DISPLAY(newdisplayindex), (int)SDL_WINDOWPOS_UNDEFINED_DISPLAY(newdisplayindex));
+        if (SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN))
+        {
+            LOG_F(ERROR, "Unable to set window fullscreen: %s.", SDL_GetError());
+            return -1;
+        }
+        else SDL_SetWindowPosition(sdl_window, (int)SDL_WINDOWPOS_UNDEFINED_DISPLAY(newdisplayindex), (int)SDL_WINDOWPOS_UNDEFINED_DISPLAY(newdisplayindex));
     }
     else
     {
-        SDL_SetWindowFullscreen(sdl_window, 0);
-        SDL_SetWindowBordered(sdl_window, borderless ? SDL_FALSE : SDL_TRUE);
-        SDL_SetWindowPosition(sdl_window, (r_windowpositioning && windowx != -1) ? windowx : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(newdisplayindex),
-                                          (r_windowpositioning && windowy != -1) ? windowy : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(newdisplayindex));
+        if (SDL_SetWindowFullscreen(sdl_window, 0))
+        {
+            LOG_F(ERROR, "Unable to set windowed mode: %s.", SDL_GetError());
+            return -1;
+        }
+        else
+        {
+            SDL_SetWindowBordered(sdl_window, borderless ? SDL_FALSE : SDL_TRUE);
+            SDL_SetWindowPosition(sdl_window, g_windowPosValid ? g_windowPos.x : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(newdisplayindex),
+                                              g_windowPosValid ? g_windowPos.y : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(newdisplayindex));
+        }
     }
 
     SDL_FlushEvent(SDL_WINDOWEVENT);
@@ -1661,6 +1781,8 @@ void setvideomode_sdlcommonpost(int32_t x, int32_t y, int32_t c, int32_t fs, int
 #if SDL_MAJOR_VERSION >= 2
     g_displayindex = newdisplayindex;
 #endif
+
+    return 0;
 }
 
 #if SDL_MAJOR_VERSION >= 2
@@ -1674,7 +1796,8 @@ int32_t videoSetMode(int32_t x, int32_t y, int32_t c, int32_t fs)
     {
         if (ret == 0)
         {
-            setvideomode_sdlcommonpost(x, y, c, fs, regrab);
+            if (setvideomode_sdlcommonpost(x, y, c, fs, regrab))
+                return -1;
         }
         return ret;
     }
@@ -1682,10 +1805,7 @@ int32_t videoSetMode(int32_t x, int32_t y, int32_t c, int32_t fs)
     VLOG_F(LOG_GFX, "Setting video mode %dx%d (%d-bpp %s).", x, y, c, ((fs & 1) ? "fullscreen" : "windowed"));
 
     if (sdl_window)
-    {
-        setvideomode_sdlcommonpost(x, y, c, fs, regrab);
-        return 0;
-    }
+        return setvideomode_sdlcommonpost(x, y, c, fs, regrab);
 
     int const display = r_displayindex < SDL_GetNumVideoDisplays() ? r_displayindex : 0;
 
@@ -1731,8 +1851,8 @@ int32_t videoSetMode(int32_t x, int32_t y, int32_t c, int32_t fs)
             so we have to create a new surface in a different format first
             to force the surface we WANT to be recreated instead of reused. */
 
-        sdl_window = SDL_CreateWindow("", r_windowpositioning && windowx != -1 ? windowx : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(display),
-                                        r_windowpositioning && windowy != -1 ? windowy : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(display), x, y,
+        sdl_window = SDL_CreateWindow("", g_windowPosValid ? g_windowPos.x : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(display),
+                                          g_windowPosValid ? g_windowPos.y : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(display), x, y,
                                         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | borderless);
 
         if (sdl_window)
@@ -1762,9 +1882,9 @@ int32_t videoSetMode(int32_t x, int32_t y, int32_t c, int32_t fs)
 #endif  // defined USE_OPENGL
     {
         // init
-        sdl_window = SDL_CreateWindow("", r_windowpositioning && windowx != -1 ? windowx : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(display),
-                                      r_windowpositioning && windowy != -1 ? windowy : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(display), x, y,
-                                      SDL_WINDOW_FULLSCREEN);
+        sdl_window = SDL_CreateWindow("", g_windowPosValid ? g_windowPos.x : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(display),
+                                          g_windowPosValid ? g_windowPos.y : (int)SDL_WINDOWPOS_CENTERED_DISPLAY(display), x, y,
+                                      SDL_WINDOW_RESIZABLE | borderless);
         if (!sdl_window)
             SDL2_VIDEO_ERR("SDL_CreateWindow");
 
@@ -1891,8 +2011,6 @@ void videoEndDrawing(void)
 //
 // showframe() -- update the display
 //
-#if SDL_MAJOR_VERSION >= 2
-
 #ifdef __ANDROID__
 extern "C" void AndroidDrawControls();
 #endif
@@ -1926,7 +2044,14 @@ void videoShowFrame(int32_t w)
         {
             glsurface_blitBuffer();
         }
-
+#if SDL_MAJOR_VERSION >= 2
+        if (g_ImGuiFrameActive)
+        {
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            g_ImGuiFrameActive = false;
+        }
+#endif
         if ((r_glfinish == 1 && r_finishbeforeswap == 1) || vsync_renderlayer == 2)
         {
             MICROPROFILE_SCOPEI("Engine", "glFinish", MP_GREEN);
@@ -1955,7 +2080,11 @@ void videoShowFrame(int32_t w)
 
         {
             MICROPROFILE_SCOPEI("Engine", "SDL_GL_SwapWindow", MP_GREEN3);
+#if SDL_MAJOR_VERSION >= 2
             SDL_GL_SwapWindow(sdl_window);
+#else
+            SDL_GL_SwapBuffers();
+#endif
         }
 
         if (r_glfinish == 1 && r_finishbeforeswap == 0 && vsync_renderlayer != 2)
@@ -1991,7 +2120,7 @@ void videoShowFrame(int32_t w)
     if (SDL_MUSTLOCK(sdl_surface)) SDL_LockSurface(sdl_surface);
     softsurface_blitBuffer((uint32_t*) sdl_surface->pixels, sdl_surface->format->BitsPerPixel);
     if (SDL_MUSTLOCK(sdl_surface)) SDL_UnlockSurface(sdl_surface);
-
+#if SDL_MAJOR_VERSION >= 2
     if (SDL_UpdateWindowSurface(sdl_window))
     {
         // If a fullscreen X11 window is minimized then this may be required.
@@ -1999,10 +2128,12 @@ void videoShowFrame(int32_t w)
         sdl_surface = SDL_GetWindowSurface(sdl_window);
         SDL_UpdateWindowSurface(sdl_window);
     }
-
+#else
+    SDL_Flip(sdl_surface);
+#endif
     MicroProfileFlip();
 }
-#endif
+
 //
 // setpalette() -- set palette values
 //
@@ -2076,7 +2207,7 @@ int32_t videoSetGamma(void)
     {
 #endif
         if (i != INT32_MIN)
-            LOG_F(ERROR, "Failed setting window gamma ramp: %s.", SDL_GetError());
+            DLOG_F(ERROR, "Failed setting window gamma ramp: %s.", SDL_GetError());
 
 #ifndef EDUKE32_GLES
 #if SDL_MAJOR_VERSION >= 2
@@ -2535,12 +2666,17 @@ int32_t handleevents_pollsdl(void)
                     case SDL_WINDOWEVENT_MOVED:
                     {
                         if (fullscreen) break;
-                        windowx = ev.window.data1;
-                        windowy = ev.window.data2;
+                        g_windowPos = { ev.window.data1, ev.window.data2 };
+                        g_windowPosValid = true;
 
-                        r_displayindex = SDL_GetWindowDisplayIndex(sdl_window);
-                        modeschecked = 0;
-                        videoGetModes();
+                        int displayindex = SDL_GetWindowDisplayIndex(sdl_window);
+
+                        if (r_displayindex != displayindex || !modeschecked)
+                        {
+                            r_displayindex = displayindex;
+                            modeschecked = 0;
+                            videoGetModes();
+                        }
                         break;
                     }
                     case SDL_WINDOWEVENT_RESIZED:
@@ -2642,7 +2778,7 @@ int32_t handleevents(void)
         if (status != GL_NO_ERROR)
         {
             do
-            { 
+            {
                 switch (status)
                 {
                     case GL_GUILTY_CONTEXT_RESET:
@@ -2668,17 +2804,15 @@ int32_t handleevents(void)
     }
 #endif
 
-#if SDL_MAJOR_VERSION >= 2
     if (!frameplace && sdl_resize.x)
     {
         if (in3dmode())
-            videoSetGameMode(fullscreen, sdl_resize.x & ~1, sdl_resize.y & ~1, bpp, upscalefactor);
+            videoSetGameMode(fullscreen, sdl_resize.x, sdl_resize.y, bpp, upscalefactor);
         else
-            videoSet2dMode(sdl_resize.x & ~1, sdl_resize.y & ~1, upscalefactor);
+            videoSet2dMode(fullscreen, sdl_resize.x, sdl_resize.y, upscalefactor);
 
         sdl_resize = {};
     }
-#endif
 
 #ifndef _WIN32
     startwin_idle(NULL);

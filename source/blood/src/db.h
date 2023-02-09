@@ -23,26 +23,26 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #pragma once
 
 #define kMaxXSprites 16384
-#define kMaxXWalls 512
-#define kMaxXSectors 512
+#define kMaxXWalls 16384
+#define kMaxXSectors 4096
 
 #ifdef NOONE_EXTENSIONS
-extern bool gModernMap;
+extern uint8_t gModernMap;
 #endif // NOONE_EXTENSIONS
 
 
 
 // by NoOne: functions to quckly check range of specifical arrays
 inline bool xspriRangeIsFine(int nXindex) {
-    return (nXindex >= 0 && nXindex < kMaxXSprites);
+    return (nXindex > 0 && nXindex < kMaxXSprites);
 }
 
 inline bool xsectRangeIsFine(int nXindex) {
-    return (nXindex >= 0 && nXindex < kMaxXSectors);
+    return (nXindex > 0 && nXindex < kMaxXSectors);
 }
 
 inline bool xwallRangeIsFine(int nXindex) {
-    return (nXindex >= 0 && nXindex < kMaxXWalls);
+    return (nXindex > 0 && nXindex < kMaxXWalls);
 }
 #pragma pack(push, 1)
 
@@ -277,7 +277,7 @@ struct SPRITEHIT {
 
 #pragma pack(pop)
 
-extern unsigned short gStatCount[kMaxStatus + 1];;
+extern unsigned short gStatCount[kMaxStatus + 1];
 
 extern bool byte_1A76C6, byte_1A76C7, byte_1A76C8;
 extern MAPHEADER2 byte_19AE44;

@@ -1050,7 +1050,7 @@ void ThrowCan(int, PLAYER *pPlayer)
     {
         sfxPlay3DSound(pSprite, 441, 0, 0);
         pSprite->shade = -128;
-        evPost(pSprite->index, 3, pPlayer->fuseTime, kCmdOn);
+        evPost(pSprite->index, 3, pPlayer->fuseTime, kCmdOn, pPlayer->nSprite);
         int nXSprite = pSprite->extra;
         XSPRITE *pXSprite = &xsprite[nXSprite];
         pXSprite->Impact = 1;
@@ -1065,7 +1065,7 @@ void DropCan(int, PLAYER *pPlayer)
     spritetype *pSprite = playerFireThing(pPlayer, 0, 0, kThingArmedSpray, 0);
     if (pSprite)
     {
-        evPost(pSprite->index, 3, pPlayer->fuseTime, kCmdOn);
+        evPost(pSprite->index, 3, pPlayer->fuseTime, kCmdOn, pPlayer->nSprite);
         UseAmmo(pPlayer, 6, gAmmoItemData[0].count);
     }
 }
@@ -1074,7 +1074,7 @@ void ExplodeCan(int, PLAYER *pPlayer)
 {
     sfxKill3DSound(pPlayer->pSprite, -1, 441);
     spritetype *pSprite = playerFireThing(pPlayer, 0, 0, kThingArmedSpray, 0);
-    evPost(pSprite->index, 3, 0, kCmdOn);
+    evPost(pSprite->index, 3, 0, kCmdOn, pPlayer->nSprite);
     UseAmmo(pPlayer, 6, gAmmoItemData[0].count);
     StartQAV(pPlayer, 15, -1);
     pPlayer->curWeapon = kWeaponNone;
@@ -1092,7 +1092,7 @@ void ThrowBundle(int, PLAYER *pPlayer)
     if (pPlayer->fuseTime < 0)
         pXSprite->Impact = 1;
     else
-        evPost(pSprite->index, 3, pPlayer->fuseTime, kCmdOn);
+        evPost(pSprite->index, 3, pPlayer->fuseTime, kCmdOn, pPlayer->nSprite);
     UseAmmo(pPlayer, 5, 1);
     pPlayer->throwPower = 0;
 }
@@ -1101,7 +1101,7 @@ void DropBundle(int, PLAYER *pPlayer)
 {
     sfxKill3DSound(pPlayer->pSprite, 16, -1);
     spritetype *pSprite = playerFireThing(pPlayer, 0, 0, kThingArmedTNTBundle, 0);
-    evPost(pSprite->index, 3, pPlayer->fuseTime, kCmdOn);
+    evPost(pSprite->index, 3, pPlayer->fuseTime, kCmdOn, pPlayer->nSprite);
     UseAmmo(pPlayer, 5, 1);
 }
 
@@ -1109,7 +1109,7 @@ void ExplodeBundle(int, PLAYER *pPlayer)
 {
     sfxKill3DSound(pPlayer->pSprite, 16, -1);
     spritetype *pSprite = playerFireThing(pPlayer, 0, 0, kThingArmedTNTBundle, 0);
-    evPost(pSprite->index, 3, 0, kCmdOn);
+    evPost(pSprite->index, 3, 0, kCmdOn, pPlayer->nSprite);
     UseAmmo(pPlayer, 5, 1);
     StartQAV(pPlayer, 24, -1, 0);
     pPlayer->curWeapon = kWeaponNone;
@@ -1121,7 +1121,7 @@ void ThrowProx(int, PLAYER *pPlayer)
     int nSpeed = mulscale16(pPlayer->throwPower, 0x177777)+0x66666;
     sfxPlay3DSound(pPlayer->pSprite, 455, 1, 0);
     spritetype *pSprite = playerFireThing(pPlayer, 0, -9460, kThingArmedProxBomb, nSpeed);
-    evPost(pSprite->index, 3, 240, kCmdOn);
+    evPost(pSprite->index, 3, 240, kCmdOn, pPlayer->nSprite);
     UseAmmo(pPlayer, 10, 1);
     pPlayer->throwPower = 0;
 }
@@ -1129,7 +1129,7 @@ void ThrowProx(int, PLAYER *pPlayer)
 void DropProx(int, PLAYER *pPlayer)
 {
     spritetype *pSprite = playerFireThing(pPlayer, 0, 0, kThingArmedProxBomb, 0);
-    evPost(pSprite->index, 3, 240, kCmdOn);
+    evPost(pSprite->index, 3, 240, kCmdOn, pPlayer->nSprite);
     UseAmmo(pPlayer, 10, 1);
 }
 
@@ -1156,7 +1156,7 @@ void DropRemote(int, PLAYER *pPlayer)
 
 void FireRemote(int, PLAYER *pPlayer)
 {
-    evSend(0, 0, 90+(pPlayer->pSprite->type-kDudePlayer1), kCmdOn);
+    evSend(0, 0, 90+(pPlayer->pSprite->type-kDudePlayer1), kCmdOn, pPlayer->nSprite);
 }
 
 #define kMaxShotgunBarrels 4
@@ -1681,7 +1681,7 @@ void AltFireLifeLeech(int nTrigger, PLAYER *pPlayer)
         pXSprite->DudeLockout = 1;
         pXSprite->stateTimer = 1;
         evPost(pMissile->index, 3, 120, kCallbackLeechStateTimer);
-        if (gGameOptions.nGameType <= 1)
+        if (gGameOptions.nGameType <= kGameTypeCoop)
         {
             int nAmmo = pPlayer->ammoCount[8];
             if (nAmmo < 25 && pPlayer->pXSprite->health > ((25-nAmmo)<<4))
@@ -1813,14 +1813,15 @@ char WeaponFindLoaded(PLAYER *pPlayer, int *a2)
 
 char processSprayCan(PLAYER *pPlayer)
 {
+    const char bUseShootAsThrow = !VanillaMode() && pPlayer->input.buttonFlags.shoot;
     switch (pPlayer->weaponState)
     {
     case 5:
-        if (!pPlayer->input.buttonFlags.shoot2)
+        if (!pPlayer->input.buttonFlags.shoot2 || bUseShootAsThrow)
             pPlayer->weaponState = 6;
         return 1;
     case 6:
-        if (pPlayer->input.buttonFlags.shoot2)
+        if (pPlayer->input.buttonFlags.shoot2 && !bUseShootAsThrow)
         {
             pPlayer->weaponState = 3;
             pPlayer->fuseTime = pPlayer->weaponTimer;
@@ -1851,14 +1852,15 @@ char processSprayCan(PLAYER *pPlayer)
 
 char processTNT(PLAYER *pPlayer)
 {
+    const char bUseShootAsThrow = !VanillaMode() && pPlayer->input.buttonFlags.shoot;
     switch (pPlayer->weaponState)
     {
     case 4:
-        if (!pPlayer->input.buttonFlags.shoot2)
+        if (!pPlayer->input.buttonFlags.shoot2 || bUseShootAsThrow)
             pPlayer->weaponState = 5;
         return 1;
     case 5:
-        if (pPlayer->input.buttonFlags.shoot2)
+        if (pPlayer->input.buttonFlags.shoot2 && !bUseShootAsThrow)
         {
             pPlayer->weaponState = 1;
             pPlayer->fuseTime = pPlayer->weaponTimer;
@@ -1989,6 +1991,7 @@ void WeaponProcess(PLAYER *pPlayer) {
     }
     #endif
 
+    char bTNTRemoteProxyCycling = 1;
     if (pPlayer->pXSprite->health == 0)
     {
         pPlayer->qavLoop = 0;
@@ -2080,13 +2083,13 @@ void WeaponProcess(PLAYER *pPlayer) {
     }
     if ((pPlayer->curWeapon == kWeaponNone) && (pPlayer->input.newWeapon != kWeaponNone) && !VanillaMode()) // if player is switching weapon (and not holstered), clear next/prev keyflags
     {
-        pPlayer->input.keyFlags.nextWeapon = kWeaponNone;
-        pPlayer->input.keyFlags.prevWeapon = kWeaponNone;
+        pPlayer->input.keyFlags.nextWeapon = 0;
+        pPlayer->input.keyFlags.prevWeapon = 0;
     }
     const KEYFLAGS oldKeyFlags = pPlayer->input.keyFlags; // used to fix next/prev weapon issue for banned weapons
     if (pPlayer->input.keyFlags.nextWeapon)
     {
-        pPlayer->input.keyFlags.nextWeapon = kWeaponNone;
+        pPlayer->input.keyFlags.nextWeapon = 0;
         if (VanillaMode())
         {
             pPlayer->weaponState = 0;
@@ -2104,11 +2107,15 @@ void WeaponProcess(PLAYER *pPlayer) {
                 return;
             }
         }
+        else
+        {
+            bTNTRemoteProxyCycling = 0; // next weapon should bypass tnt cycling logic
+        }
         pPlayer->input.newWeapon = weapon;
     }
     if (pPlayer->input.keyFlags.prevWeapon)
     {
-        pPlayer->input.keyFlags.prevWeapon = kWeaponNone;
+        pPlayer->input.keyFlags.prevWeapon = 0;
         if (VanillaMode())
         {
             pPlayer->weaponState = 0;
@@ -2125,6 +2132,10 @@ void WeaponProcess(PLAYER *pPlayer) {
                 pPlayer->nextWeapon = weapon;
                 return;
             }
+        }
+        else
+        {
+            bTNTRemoteProxyCycling = 0; // prev weapon should bypass tnt cycling logic
         }
         pPlayer->input.newWeapon = weapon;
     }
@@ -2172,7 +2183,7 @@ void WeaponProcess(PLAYER *pPlayer) {
                 pPlayer->curWeapon = oldWeapon;
             }
         }
-        if (pPlayer->input.newWeapon == kWeaponTNT)
+        if (bTNTRemoteProxyCycling && (pPlayer->input.newWeapon == kWeaponTNT))
         {
             if (pPlayer->curWeapon == kWeaponTNT)
             {
@@ -2550,7 +2561,7 @@ void WeaponProcess(PLAYER *pPlayer) {
             }
             return;
         case kWeaponLifeLeech:
-            if (gGameOptions.nGameType <= 1 && !checkAmmo2(pPlayer, 8, 1) && pPlayer->pXSprite->health < (25 << 4))
+            if (gGameOptions.nGameType <= kGameTypeCoop && !checkAmmo2(pPlayer, 8, 1) && pPlayer->pXSprite->health < (25 << 4))
             {
                 sfxPlay3DSound(pPlayer->pSprite, 494, 2, 0);
                 StartQAV(pPlayer, 116, nClientFireLifeLeech, 0);

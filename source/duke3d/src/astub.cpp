@@ -8616,7 +8616,7 @@ static int osdcmd_upscalefactor(osdcmdptr_t parm)
 
         if (!in3dmode())
         {
-            videoSet2dMode(xres, yres, upscalefactor);
+            videoSet2dMode(fullscreen, xres, yres, upscalefactor);
             return OSDCMD_OK;
         }
 
@@ -10856,7 +10856,9 @@ static void Keys2d3d(void)
 
         if (PRESSED_KEYSC(Z)) // CTRL+Z
         {
-            if (!in3dmode() || m32_3dundo)
+            if (EDITING_MAP_P())
+                message("Can't undo or redo while editing!");
+            else if (!in3dmode() || m32_3dundo)
             {
                 if (eitherSHIFT)
                 {

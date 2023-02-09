@@ -34,7 +34,9 @@
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <EnableASAN>true</EnableASAN>
+  </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <EnableASAN>true</EnableASAN>
   </PropertyGroup>
@@ -232,6 +234,7 @@
     <ClCompile Include="..\..\source\blood\src\misc.cpp" />
     <ClCompile Include="..\..\source\blood\src\network.cpp" />
     <ClCompile Include="..\..\source\blood\src\nnexts.cpp" />
+    <ClCompile Include="..\..\source\blood\src\nnextsif.cpp" />
     <ClCompile Include="..\..\source\blood\src\osdcmd.cpp" />
     <ClCompile Include="..\..\source\blood\src\player.cpp" />
     <ClCompile Include="..\..\source\blood\src\qav.cpp" />
@@ -261,6 +264,9 @@
     </ProjectReference>
     <ProjectReference Include="glad.vcxproj">
       <Project>{6ac1d997-8dae-4343-8dd8-da2a1ca63212}</Project>
+    </ProjectReference>
+    <ProjectReference Include="imgui.vcxproj">
+      <Project>{c782e1f1-aace-4c00-afaf-3448dac597c5}</Project>
     </ProjectReference>
     <ProjectReference Include="libsmackerdec.vcxproj">
       <Project>{598f0d83-2c1b-4f7c-b04d-7fdd471c8c45}</Project>
@@ -336,6 +342,7 @@
     <ClInclude Include="..\..\source\blood\src\messages.h" />
     <ClInclude Include="..\..\source\blood\src\mirrors.h" />
     <ClInclude Include="..\..\source\blood\src\nnexts.h" />
+    <ClInclude Include="..\..\source\blood\src\nnextsif.h" />
     <ClInclude Include="..\..\source\blood\src\warp.h" />
     <ClInclude Include="..\..\source\blood\src\inifile.h" />
     <ClInclude Include="..\..\source\blood\src\iob.h" />

@@ -1036,6 +1036,7 @@ const char *EventNames[MAXEVENTS] =
     "EVENT_PREUPDATEANGLES",
     "EVENT_POSTUPDATEANGLES",
     "EVENT_GETBONUSTILE",
+    "EVENT_PREACTORDAMAGE",
 };
 
 uint8_t *bitptr; // pointer to bitmap of which bytecode positions contain pointers
@@ -2320,7 +2321,7 @@ static void C_ReplaceQuoteSubstring(const size_t q, char const * const query, ch
             Bstrncpy(tempbuf, apStrings[q], i);
             Bstrcat(tempbuf, replacement);
             Bstrcat(tempbuf, &apStrings[q][i + querylength]);
-            Bstrncpy(apStrings[q], tempbuf, MAXQUOTELEN - 1);
+            Bstrncpyz(apStrings[q], tempbuf, MAXQUOTELEN);
             i = MAXQUOTELEN - querylength - 2;
         }
 }
@@ -4727,6 +4728,16 @@ ifvar:
             C_GetManyVars(tw==CON_CANSEE?8:7);
             C_GetManyVarsType(GAMEVAR_READONLY,tw==CON_CANSEE?1:6);
             if (tw==CON_HITSCAN) C_GetNextVar();
+            if (tw == CON_CANSEE)
+            {
+                if (C_GetKeyword() == -1)
+                    C_GetNextVar();
+                else
+                {
+                    scriptWriteValue(GV_FLAG_CONSTANT);
+                    scriptWriteValue(CSTAT_WALL_1WAY);
+                }
+            }
             continue;
 
         case CON_CANSEESPR:
@@ -6286,6 +6297,7 @@ static void C_AddDefaultDefinitions(void)
         { "PF_COOLEXPLOSION1",    PROJECTILE_COOLEXPLOSION1 },
         { "PF_EXPLODEONTIMER",    PROJECTILE_EXPLODEONTIMER },
         { "PF_FORCEIMPACT",       PROJECTILE_FORCEIMPACT },
+        { "PF_HITRADIUS_ADDITIVE", PROJECTILE_HITRADIUS_ADDITIVE },
         { "PF_HITSCAN",           PROJECTILE_HITSCAN },
         { "PF_KNEE",              PROJECTILE_KNEE },
         { "PF_LOSESVELOCITY",     PROJECTILE_LOSESVELOCITY },
