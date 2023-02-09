@@ -185,9 +185,12 @@ bool CheckProximityPoint(int nX1, int nY1, int nZ1, int nX2, int nY2, int nZ2, i
     int oY = klabs(nY2-nY1)>>4;
     if (oY >= nDist)
         return 0;
-    int oZ = klabs(nZ2-nZ1)>>4;
-    if (oZ >= nDist)
-        return 0;
+    if (nZ2 != nZ1)
+    {
+        int oZ = klabs(nZ2-nZ1)>>8;
+        if (oZ >= nDist)
+            return 0;
+    }
     if (approxDist(oX, oY) >= nDist) return 0;
     return 1;
 }
@@ -482,9 +485,11 @@ int VectorScan(spritetype *pSprite, int nOffset, int nZOffset, int dx, int dy, i
             if ((pOther->cstat & 0x30) != 0)
                 return 3;
             int nPicnum = pOther->picnum;
-            if (tilesiz[nPicnum].x == 0 || tilesiz[nPicnum].y == 0)
+            int nSizX = tilesiz[nPicnum].x;
+            int nSizY = tilesiz[nPicnum].y;
+            if (nSizX == 0 || nSizY == 0)
                 return 3;
-            int height = (tilesiz[nPicnum].y*pOther->yrepeat)<<2;
+            int height = (nSizY*pOther->yrepeat)<<2;
             int otherZ = pOther->z;
             if (pOther->cstat & 0x80)
                 otherZ += height / 2;
@@ -492,22 +497,22 @@ int VectorScan(spritetype *pSprite, int nOffset, int nZOffset, int dx, int dy, i
             if (nOffset)
                 otherZ -= (nOffset*pOther->yrepeat)<<2;
             dassert(height > 0);
-            int height2 = scale(otherZ-gHitInfo.hitz, tilesiz[nPicnum].y, height);
+            int height2 = scale(otherZ-gHitInfo.hitz, nSizY, height);
             if (!(pOther->cstat & 8))
-                height2 = tilesiz[nPicnum].y-height2;
-            if (height2 >= 0 && height2 < tilesiz[nPicnum].y)
+                height2 = nSizY-height2;
+            if (height2 >= 0 && height2 < nSizY)
             {
-                int width = (tilesiz[nPicnum].x*pOther->xrepeat)>>2;
+                int width = (nSizX*pOther->xrepeat)>>2;
                 width = (width*3)/4;
                 int check1 = ((y1 - pOther->y)*dx - (x1 - pOther->x)*dy) / ksqrt(dx*dx+dy*dy);
                 dassert(width > 0);
-                int width2 = scale(check1, tilesiz[nPicnum].x, width);
+                int width2 = scale(check1, nSizX, width);
                 int nOffset = picanm[nPicnum].xofs;
-                width2 += nOffset + tilesiz[nPicnum].x / 2;
-                if (width2 >= 0 && width2 < tilesiz[nPicnum].x)
+                width2 += nOffset + nSizX / 2;
+                if (width2 >= 0 && width2 < nSizX)
                 {
                     char *pData = tileLoadTile(nPicnum);
-                    if (pData[width2*tilesiz[nPicnum].y+height2] != (char)255)
+                    if (pData[width2*nSizY+height2] != (char)255)
                         return 3;
                 }
             }
@@ -624,52 +629,35 @@ int VectorScan(spritetype *pSprite, int nOffset, int nZOffset, int dx, int dy, i
         }
         if (gHitInfo.hitsect >= 0)
         {
+            int nSprite, nLink;
             if (dz > 0)
             {
-                if (gUpperLink[gHitInfo.hitsect] < 0)
+                nSprite = gUpperLink[gHitInfo.hitsect];
+                if (nSprite < 0)
                     return 2;
-                int nSprite = gUpperLink[gHitInfo.hitsect];
-                int nLink = sprite[nSprite].owner & 0x3fff;
-                gHitInfo.hitsect = -1;
-                gHitInfo.hitwall = -1;
-                gHitInfo.hitsprite = -1;
-                x1 = gHitInfo.hitx + sprite[nLink].x - sprite[nSprite].x;
-                y1 = gHitInfo.hity + sprite[nLink].y - sprite[nSprite].y;
-                z1 = gHitInfo.hitz + sprite[nLink].z - sprite[nSprite].z;
-                pos = { x1, y1, z1 };
-                hitData.xyz.z = gHitInfo.hitz;
-                hitscan(&pos, sprite[nLink].sectnum, dx, dy, dz<<4, &hitData, CLIPMASK1);
-                gHitInfo.hitsect = hitData.sect;
-                gHitInfo.hitwall = hitData.wall;
-                gHitInfo.hitsprite = hitData.sprite;
-                gHitInfo.hitx = hitData.xyz.x;
-                gHitInfo.hity = hitData.xyz.y;
-                gHitInfo.hitz = hitData.xyz.z;
-                continue;
             }
             else
             {
-                if (gLowerLink[gHitInfo.hitsect] < 0)
+                nSprite = gLowerLink[gHitInfo.hitsect];
+                if (nSprite < 0)
                     return 1;
-                int nSprite = gLowerLink[gHitInfo.hitsect];
-                int nLink = sprite[nSprite].owner & 0x3fff;
-                gHitInfo.hitsect = -1;
-                gHitInfo.hitwall = -1;
-                gHitInfo.hitsprite = -1;
-                x1 = gHitInfo.hitx + sprite[nLink].x - sprite[nSprite].x;
-                y1 = gHitInfo.hity + sprite[nLink].y - sprite[nSprite].y;
-                z1 = gHitInfo.hitz + sprite[nLink].z - sprite[nSprite].z;
-                pos = { x1, y1, z1 };
-                hitData.xyz.z = gHitInfo.hitz;
-                hitscan(&pos, sprite[nLink].sectnum, dx, dy, dz<<4, &hitData, CLIPMASK1);
-                gHitInfo.hitsect = hitData.sect;
-                gHitInfo.hitwall = hitData.wall;
-                gHitInfo.hitsprite = hitData.sprite;
-                gHitInfo.hitx = hitData.xyz.x;
-                gHitInfo.hity = hitData.xyz.y;
-                gHitInfo.hitz = hitData.xyz.z;
-                continue;
             }
+            nLink = sprite[nSprite].owner & 0x3fff;
+            gHitInfo.hitsect = gHitInfo.hitwall = gHitInfo.hitsprite = -1;
+            x1 = gHitInfo.hitx + sprite[nLink].x - sprite[nSprite].x;
+            y1 = gHitInfo.hity + sprite[nLink].y - sprite[nSprite].y;
+            z1 = gHitInfo.hitz + sprite[nLink].z - sprite[nSprite].z;
+            pos = { x1, y1, z1 };
+            hitData.xyz.z = gHitInfo.hitz;
+            hitscan(&pos, sprite[nLink].sectnum,
+                dx, dy, dz << 4, &hitData, CLIPMASK1);
+            gHitInfo.hitsect = hitData.sect;
+            gHitInfo.hitwall = hitData.wall;
+            gHitInfo.hitsprite = hitData.sprite;
+            gHitInfo.hitx = hitData.xyz.x;
+            gHitInfo.hity = hitData.xyz.y;
+            gHitInfo.hitz = hitData.xyz.z;
+            continue;
         }
         return -1;
     }

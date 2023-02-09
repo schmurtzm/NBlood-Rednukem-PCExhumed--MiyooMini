@@ -382,7 +382,7 @@ static void ThrowThing(int nXIndex, bool impact) {
     if (impact == true && dist <= 7680) xsprite[pThing->extra].Impact = true;
     else {
         xsprite[pThing->extra].Impact = false;
-        evPost(pThing->index, 3, 120 * Random(2) + 120, kCmdOn);
+        evPost(pThing->index, 3, 120 * Random(2) + 120, kCmdOn, pSprite->index);
     }
 }
 
@@ -1122,62 +1122,59 @@ void aiGenDudeNewState(spritetype* pSprite, AISTATE* pAIState) {
     
 bool playGenDudeSound(spritetype* pSprite, int mode) {
     
-    if (mode < kGenDudeSndTargetSpot || mode >= kGenDudeSndMax) return false;
-    GENDUDESND* sndInfo =& gCustomDudeSnd[mode]; bool gotSnd = false;
+    if (!rngok(mode, kGenDudeSndTargetSpot, kGenDudeSndMax) || !rngok(pSprite->extra, 1, kMaxXSprites))
+        return false;
+
+    GENDUDESND* sndInfo =& gCustomDudeSnd[mode];
     short sndStartId = xsprite[pSprite->extra].sysData1; int rand = sndInfo->randomRange;
     int sndId = (sndStartId <= 0) ? sndInfo->defaultSndId : sndStartId + sndInfo->sndIdOffset;
     GENDUDEEXTRA* pExtra = genDudeExtra(pSprite);
 
-    // let's check if there same sounds already played by other dudes
-    // so we won't get a lot of annoying screams in the same time and ensure sound played in it's full length (if not interruptable)
-    if (pExtra->sndPlaying && !sndInfo->interruptable) {
-        for (int i = 0; i < 256; i++) {
-            if (Bonkle[i].sfxId <= 0) continue;
-            for (int a = 0; a < rand; a++) {
-                if (sndId + a == Bonkle[i].sfxId) {
-                    if (Bonkle[i].lChan <= 0) {
-                        pExtra->sndPlaying = false;
-                        break;
-                    }
-                    return true;
-                }
-            }
-        }
-
-        pExtra->sndPlaying = false;
-        
-    }
-
     if (sndId < 0) return false;
-    else if (sndStartId <= 0) { sndId += Random(rand); gotSnd = true; }
-    else {
-
+    else if (sndStartId <= 0) sndId += Random(rand);
+    else
+    {
         // Let's try to get random snd
         int maxRetries = 5;
-        while (maxRetries-- > 0) {
+        while (--maxRetries > 0)
+        {
             int random = Random(rand);
             if (!gSoundRes.Lookup(sndId + random, "SFX")) continue;
             sndId = sndId + random;
-            gotSnd = true;
             break;
         }
 
         // If no success in getting random snd, get first existing one
-        if (gotSnd == false) {
+        if (maxRetries <= 0)
+        {
             int maxSndId = sndId + rand;
-            while (sndId++ < maxSndId) {
-                if (!gSoundRes.Lookup(sndId, "SFX")) continue;
-                gotSnd = true;
-                break;
+            while (sndId < maxSndId && !gSoundRes.Lookup(sndId++, "SFX"));
+        }
+    }
+    
+    // let's check if there same sounds already played by other dudes
+    // so we won't get a lot of annoying screams in the same time and
+    // ensure sound played in it's full length (if not interruptable)
+    if (pExtra->sndPlaying && !sndInfo->interruptable)
+    {
+        int i = nBonkles;
+        while(--i >= 0)
+        {
+            BONKLE* pBonk = &Bonkle[i];
+            if (pBonk->sfxId == sndId)
+            {
+                if (!pBonk->hSnd)
+                    break;
+
+                return true;
             }
         }
 
+        pExtra->sndPlaying = false;
     }
 
-    if (gotSnd == false) return false;
-    else if (sndInfo->aiPlaySound) aiPlay3DSound(pSprite, sndId, AI_SFX_PRIORITY_2, -1);
+    if (sndInfo->aiPlaySound) aiPlay3DSound(pSprite, sndId, AI_SFX_PRIORITY_2, -1);
     else sfxPlay3DSound(pSprite, sndId, -1, 0);
-    
     pExtra->sndPlaying = true;
     return true;
 }
@@ -1253,14 +1250,23 @@ void killDudeLeech(spritetype* pLeech) {
 }
     
 XSPRITE* getNextIncarnation(XSPRITE* pXSprite) {
-    for (int i = bucketHead[pXSprite->txID]; i < bucketHead[pXSprite->txID + 1]; i++) {
-        if (rxBucket[i].type != 3 || rxBucket[i].index == pXSprite->reference)
-            continue;
-        
-        if (sprite[rxBucket[i].index].statnum == kStatInactive)
-            return &xsprite[sprite[rxBucket[i].index].extra];
+    
+    RXBUCKET* pRx; int s, e, t = -1;
+    getRxBucket(pXSprite->txID, &s, &e, &pRx);
+    while (s < e)
+    {
+        if (pRx->type == OBJ_SPRITE && sprite[pRx->index].statnum == kStatInactive)
+        {
+            t = pRx->index;
+            if (nnExtRandom(0, 6) == 3)
+                break;
+        }
+
+        pRx++;
+        s++;
     }
-    return NULL;
+
+    return (t >= 0) ? &xsprite[sprite[t].extra] : NULL;
 }
 
 bool dudeIsMelee(XSPRITE* pXSprite) {
@@ -1525,7 +1531,7 @@ int getDodgeChance(spritetype* pSprite) {
 
 }
 
-void dudeLeechOperate(spritetype* pSprite, XSPRITE* pXSprite, EVENT event)
+void dudeLeechOperate(spritetype* pSprite, XSPRITE* pXSprite, const EVENT &event)
 {
     if (event.cmd == kCmdOff) {
         actPostSprite(pSprite->index, kStatFree);
@@ -1707,7 +1713,7 @@ void genDudeTransform(spritetype* pSprite) {
     XSPRITE* pXIncarnation = getNextIncarnation(pXSprite);
     if (pXIncarnation == NULL) {
         if (pXSprite->sysData1 == kGenDudeTransformStatus) pXSprite->sysData1 = 0;
-        trTriggerSprite(pSprite->index, pXSprite, kCmdOff);
+        trTriggerSprite(pSprite->index, pXSprite, kCmdOff, pSprite->index);
         return;
     }
     
@@ -1723,7 +1729,7 @@ void genDudeTransform(spritetype* pSprite) {
     pXIncarnation->triggerOff = false;
 
     // trigger dude death before transform
-    trTriggerSprite(pSprite->index, pXSprite, kCmdOff);
+    trTriggerSprite(pSprite->index, pXSprite, kCmdOff, pSprite->index);
 
     pSprite->type = pSprite->inittype = pIncarnation->type;
     pSprite->flags = pIncarnation->flags;
@@ -1791,13 +1797,15 @@ void genDudeTransform(spritetype* pSprite) {
             // re-init sprite
             aiInitSprite(pSprite);
 
-            // try to restore target
-            if (target == -1) aiSetTarget(pXSprite, pSprite->x, pSprite->y, pSprite->z);
-            else aiSetTarget(pXSprite, target);
+            if (!pXSprite->dudeFlag4)
+            {
+                // try to restore target
+                if (target == -1) aiSetTarget(pXSprite, pSprite->x, pSprite->y, pSprite->z);
+                else aiSetTarget(pXSprite, target);
 
-            // finally activate it
-            aiActivateDude(pSprite, pXSprite);
-
+                // finally activate it
+                aiActivateDude(pSprite, pXSprite);
+            }
             break;
     }
     pXIncarnation->triggerOn = triggerOn;

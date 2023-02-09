@@ -29,9 +29,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 struct Anim
 {
     short nSeq;
-    short field_2;
-    short field_4;
+    short nFrame;
     short nSprite;
+};
+
+enum
+{
+    kAnimFlag1 = (1 << 2),
+    kAnimLoop  = (1 << 4)
 };
 
 extern Anim AnimList[];
@@ -41,7 +46,7 @@ void InitAnims();
 void DestroyAnim(int nAnim);
 int BuildAnim(int nSprite, int val, int val2, int x, int y, int z, int nSector, int nRepeat, int nFlag);
 short GetAnimSprite(short nAnim);
-
+void UnlinkIgnitedAnim(int nSprite);
 void FuncAnim(int, int, int);
 void BuildExplosion(short nSprite);
 int BuildSplash(int nSprite, int nSector);

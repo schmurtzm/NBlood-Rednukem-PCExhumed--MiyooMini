@@ -80,7 +80,9 @@ void _consoleSysMsg(const char* pMessage, ...);
 #define kTicsPerFrame 4
 #define kTicsPerSec (kTicRate/kTicsPerFrame)
 
+#define LENSBUFFER 4077
 #define TILTBUFFER 4078
+#define CRYSTALBALLBUFFER 4079
 
 #define kExplodeMax 8
 
@@ -104,6 +106,25 @@ void _consoleSysMsg(const char* pMessage, ...);
 #define kDmgSpirit 5
 #define kDmgElectric 6
 #define kDmgMax 7
+
+#define kCauserGame (kMaxSprites - 1)
+
+// GAMETYPES //////////////////////////////////////////////////
+enum {
+kGameTypeSinglePlayer           = 0,
+kGameTypeCoop                   = 1,
+kGameTypeBloodBath              = 2,
+kGameTypeTeams                  = 3,
+};
+
+// GAMEFLAGS //////////////////////////////////////////////////
+enum {
+kGameFlagNone                   =  0,
+kGameFlagContinuing             =  1 << 0,
+kGameFlagEnding                 =  1 << 1,
+kGameFlagPlayIntro              =  1 << 2,
+kGameFlagPlayOutro              =  1 << 3,
+};
 
 // MEDIUM /////////////////////////////////////////////////////
 enum {

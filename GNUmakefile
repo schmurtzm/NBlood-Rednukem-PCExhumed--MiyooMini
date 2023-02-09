@@ -170,7 +170,27 @@ mimalloc_src := $(mimalloc_root)/src
 mimalloc_inc := $(mimalloc_root)/include
 mimalloc_obj := $(obj)/$(mimalloc)
 
-mimalloc_cflags := -D_WIN32_WINNT=0x0600 -DMI_USE_RTLGENRANDOM -DMI_SHOW_ERRORS -I$(mimalloc_inc) -fexceptions -Wno-cast-qual -Wno-class-memaccess -Wno-unknown-pragmas
+mimalloc_cflags := -D_WIN32_WINNT=0x0600 -DMI_USE_RTLGENRANDOM -DMI_SHOW_ERRORS -I$(mimalloc_inc) -fexceptions -Wno-cast-qual -Wno-class-memaccess -Wno-unknown-pragmas -Wno-array-bounds -Wno-null-dereference
+
+#### imgui
+
+imgui := imgui
+
+imgui_objs := \
+    imgui.cpp \
+    imgui_demo.cpp \
+    imgui_draw.cpp \
+    imgui_impl_opengl3.cpp \
+    imgui_impl_sdl.cpp \
+    imgui_tables.cpp \
+    imgui_widgets.cpp \
+
+imgui_root := $(source)/$(imgui)
+imgui_src := $(imgui_root)/src
+imgui_inc := $(imgui_root)/include
+imgui_obj := $(obj)/$(imgui)
+
+imgui_cflags := -I$(imgui_inc) -Wno-cast-qual -Wno-cast-function-type -Wno-null-dereference -Wno-stringop-overflow
 
 #### Voidwrap
 
@@ -264,6 +284,10 @@ engine_obj := $(obj)/$(engine)
 engine_cflags := -I$(engine_src) -I$(mimalloc_inc)
 
 engine_deps := mimalloc
+
+ifneq (1,$(SDL_TARGET))
+    engine_deps += imgui
+endif
 
 ifneq (0,$(USE_PHYSFS))
     engine_deps += physfs
@@ -445,7 +469,7 @@ audiolib_cflags :=
 audiolib_deps :=
 
 ifeq ($(PLATFORM),WINDOWS)
-    audiolib_objs += driver_directsound.cpp driver_winmm.cpp 
+    audiolib_objs += driver_directsound.cpp driver_winmm.cpp
 endif
 ifeq ($(SUBPLATFORM),LINUX)
     ifneq ($(USE_ALSA),0)
@@ -868,7 +892,8 @@ blood_game_objs := \
 	weapon.cpp \
 
 ifeq ($(NOONE_EXTENSIONS),1)
-    blood_game_objs += nnexts.cpp
+    blood_game_objs += nnextsif.cpp
+	blood_game_objs += nnexts.cpp
     blood_game_objs += aiunicult.cpp
 endif
 
@@ -1438,6 +1463,9 @@ $(games): $$(foreach i,$(roles),$$($$@_$$i)$(EXESUFFIX)) | start
 ebacktrace: $(ebacktrace_dll) | start
 	@$(call LL,$^)
 
+voidwrap: $(voidwrap_lib) | start
+	@$(call LL,$^)
+
 ifeq ($(PLATFORM),WII)
 ifneq ($(ELF2DOL),)
 %$(DOLSUFFIX): %$(EXESUFFIX)
@@ -1497,6 +1525,9 @@ getdxdidf$(EXESUFFIX): $(tools_obj)/getdxdidf.$o $(foreach i,tools $(tools_deps)
 $(voidwrap_lib): $(foreach i,$(voidwrap),$(call expandobjs,$i))
 	$(LINK_STATUS)
 	$(RECIPE_IF) $(LINKER) -shared -Wl,-soname,$@ -o $@ $^ $(LIBDIRS) $(voidwrap_root)/sdk/redistributable_bin/$(steamworks_lib) $(RECIPE_RESULT_LINK)
+ifneq ($(STRIP),)
+	$(STRIP) $@
+endif
 
 
 ### Main Rules

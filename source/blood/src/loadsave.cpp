@@ -97,7 +97,8 @@ void LoadSave::Write(void *pData, int nSize)
 
 void LoadSave::LoadGame(char *pzFile)
 {
-    bool demoWasPlayed = gDemo.at1;
+    const char bDemoWasPlayed = gDemo.at1;
+    const char bGameWasStarted = gGameStarted;
     if (gDemo.at1)
         gDemo.Close();
 
@@ -129,8 +130,8 @@ void LoadSave::LoadGame(char *pzFile)
     InitSectorFX();
     viewInitializePrediction();
     PreloadCache();
-    if (!bVanilla && !gMe->packSlots[1].isActive) // if diving suit is not active, turn off reverb sound effect
-        sfxSetReverb(0);
+    if (!VanillaMode()) // set reverb sound effect state
+        sfxSetReverb(packItemActive(gMe, kPackDivingSuit) || powerupCheck(gMe, kPwUpReflectShots));
     ambInit();
 #ifdef YAX_ENABLE
     yax_update(numyaxbunches > 0 ? 2 : 1);
@@ -159,6 +160,7 @@ void LoadSave::LoadGame(char *pzFile)
     else
         gGameMessageMgr.Clear();
     viewSetErrorMessage("");
+    viewResizeView(gViewSize);
     if (!gGameStarted)
     {
         netWaitForEveryone(0);
@@ -198,7 +200,7 @@ void LoadSave::LoadGame(char *pzFile)
     }
 #endif
 
-    if ((unsigned)gGameOptions.nEpisode >= gEpisodeCount || (unsigned)gGameOptions.nLevel >= gEpisodeInfo[gGameOptions.nEpisode].nLevels
+    if (gGameOptions.nEpisode >= gEpisodeCount || gGameOptions.nLevel >= gEpisodeInfo[gGameOptions.nEpisode].nLevels
         || Bstrcasecmp(gEpisodeInfo[gGameOptions.nEpisode].levelsInfo[gGameOptions.nLevel].Filename, gGameOptions.zLevelName) != 0)
     {
         if (!gSysRes.Lookup(gGameOptions.zLevelName, "MAP"))
@@ -213,7 +215,8 @@ void LoadSave::LoadGame(char *pzFile)
     }
 
     if (MusicRestartsOnLoadToggle
-        || demoWasPlayed
+        || bDemoWasPlayed
+        || !bGameWasStarted
         || (gMusicPrevLoadedEpisode != gGameOptions.nEpisode || gMusicPrevLoadedLevel != gGameOptions.nLevel))
     {
         levelTryPlayMusicOrNothing(gGameOptions.nEpisode, gGameOptions.nLevel);
@@ -540,7 +543,9 @@ void LoadSaveSetup(void)
     void ViewLoadSaveConstruct(void);
     void WarpLoadSaveConstruct(void);
     void WeaponLoadSaveConstruct(void);
-
+#ifdef NOONE_EXTENSIONS
+    void nnExtLoadSaveConstruct(void);
+#endif
     myLoadSave = new MyLoadSave();
 
     ActorLoadSaveConstruct();
@@ -556,4 +561,7 @@ void LoadSaveSetup(void)
     ViewLoadSaveConstruct();
     WarpLoadSaveConstruct();
     WeaponLoadSaveConstruct();
+#ifdef NOONE_EXTENSIONS
+    nnExtLoadSaveConstruct();
+#endif
 }
