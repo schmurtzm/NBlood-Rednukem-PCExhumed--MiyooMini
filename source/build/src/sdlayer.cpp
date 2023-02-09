@@ -14,6 +14,7 @@
 #include "renderlayer.h"
 #include "sdl_inc.h"
 #include "softsurface.h"
+#include "keyboard.h"
 
 #if SDL_MAJOR_VERSION >= 2
 # include "imgui.h"
